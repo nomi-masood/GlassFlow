@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
-import { Lead, Stage, View, User, Task, TaskStatus } from './types';
-import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS } from './constants';
+import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType } from './types';
+import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Pipeline from './components/Pipeline';
 import LeadsList from './components/LeadsList';
 import TasksBoard from './components/TasksBoard';
 import UserManagement from './components/UserManagement';
+import HistoryPage from './components/HistoryPage';
+import LeadDetailPanel from './components/LeadDetailPanel';
 import Login from './components/Login';
 import { GlassCard, GlassButton, GlassInput } from './components/GlassComponents';
 import { Plus, X, Sparkles, AlertCircle, ChevronDown, LayoutTemplate, Globe } from 'lucide-react';
@@ -40,10 +41,14 @@ const App: React.FC = () => {
   const [leads, setLeads] = useState<Lead[]>(MOCK_LEADS);
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>(MOCK_HISTORY);
   const [flowScore, setFlowScore] = useState(120);
   const [showAddModal, setShowAddModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
   
+  // Lead Detail Panel State
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+
   // Lost Modal State
   const [lostModal, setLostModal] = useState<{ show: boolean; leadId: string | null }>({ show: false, leadId: null });
 
@@ -77,7 +82,27 @@ const App: React.FC = () => {
     setTimeout(() => setToast({ show: false, message: '' }), 3000);
   };
 
+  // Helper function to log actions
+  const logAction = (action: ActionType, details: string, targetId?: string, targetName?: string) => {
+    if (!currentUser) return;
+    
+    const newLog: HistoryLog = {
+      id: Math.random().toString(36).substr(2, 9),
+      action,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      targetId,
+      targetName,
+      details,
+      timestamp: new Date().toISOString()
+    };
+    
+    setHistoryLogs(prev => [newLog, ...prev]);
+  };
+
   const updateLeadStage = (leadId: string, newStage: Stage, lostReason?: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    
     setLeads(prev => prev.map(l => {
       if (l.id === leadId) {
         // Gamification logic
@@ -99,6 +124,10 @@ const App: React.FC = () => {
       }
       return l;
     }));
+
+    if (lead && lead.stage !== newStage) {
+        logAction('LEAD_STAGE_CHANGE', `Moved from ${lead.stage} to ${newStage}`, lead.id, lead.name);
+    }
   };
 
   const handleMoveLead = (leadId: string, newStage: Stage) => {
@@ -145,6 +174,16 @@ const App: React.FC = () => {
       // Update existing lead
       setLeads(prev => prev.map(l => {
         if (l.id === editingLeadId) {
+          // Update tags if type changed
+          let newTags = [...l.tags];
+          // Remove old type if present and add new type
+          if (l.type && newLead.type !== l.type) {
+             newTags = newTags.filter(t => t !== l.type);
+          }
+          if (!newTags.includes(newLead.type)) {
+             newTags.unshift(newLead.type);
+          }
+
           return {
             ...l,
             name: newLead.name,
@@ -154,11 +193,12 @@ const App: React.FC = () => {
             stage: newLead.stage,
             type: newLead.type,
             source: newLead.source,
-            // Keep existing fields
+            tags: newTags
           };
         }
         return l;
       }));
+      logAction('LEAD_UPDATE', `Updated lead details: ${newLead.name}`, editingLeadId, newLead.name);
       showToast('Lead updated successfully');
     } else {
       // Create new lead
@@ -177,6 +217,7 @@ const App: React.FC = () => {
       };
       setLeads([...leads, lead]);
       setFlowScore(s => s + 20);
+      logAction('LEAD_CREATE', `Created new lead: ${lead.name}`, lead.id, lead.name);
       const stageName = PIPELINE_COLUMNS.find(c => c.id === newLead.stage)?.title || 'Pipeline';
       showToast(`New lead added to ${stageName}`);
     }
@@ -185,14 +226,30 @@ const App: React.FC = () => {
     setEditingLeadId(null);
     setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect' });
   };
+  
+  // Handler for Lead Detail Panel notes update
+  const handleUpdateLeadNotes = (leadId: string, notes: string) => {
+    setLeads(prev => prev.map(l => {
+        if (l.id === leadId) {
+            return { ...l, notes };
+        }
+        return l;
+    }));
+    logAction('LEAD_UPDATE', 'Updated lead notes', leadId, undefined);
+  };
 
   const handleBulkDeleteLeads = (ids: string[]) => {
     setLeads(prev => prev.filter(l => !ids.includes(l.id)));
+    logAction('LEAD_DELETE', `Bulk deleted ${ids.length} leads`);
     showToast(`Deleted ${ids.length} leads`);
   };
 
   const handleDeleteLead = (id: string) => {
+    const lead = leads.find(l => l.id === id);
     setLeads(prev => prev.filter(l => l.id !== id));
+    if (lead) {
+        logAction('LEAD_DELETE', `Deleted lead: ${lead.name}`, lead.id, lead.name);
+    }
     showToast('Lead deleted');
   };
 
@@ -298,6 +355,7 @@ const App: React.FC = () => {
       if (newLeads.length > 0) {
         setLeads(prev => [...prev, ...newLeads]);
         setFlowScore(s => s + (newLeads.length * 5));
+        logAction('LEAD_CREATE', `Imported ${newLeads.length} leads via CSV`, 'bulk_import', 'Bulk Import');
         showToast(`Success! Imported ${newLeads.length} leads.`);
       } else {
         showToast('Could not parse any valid leads from file.');
@@ -335,16 +393,22 @@ const App: React.FC = () => {
         attachments: taskData.attachments || []
     };
     setTasks([...tasks, newTask]);
+    logAction('TASK_CREATE', `Created task: ${newTask.title}`, newTask.id, newTask.title);
     showToast('Task assigned successfully');
   };
 
   const handleEditTask = (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+    logAction('TASK_UPDATE', `Updated task: ${updatedTask.title}`, updatedTask.id, updatedTask.title);
     showToast('Task updated successfully');
   };
 
   const handleDeleteTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     setTasks(prev => prev.filter(t => t.id !== taskId));
+    if (task) {
+        logAction('TASK_DELETE', `Deleted task: ${task.title}`, task.id, task.title);
+    }
     showToast('Task deleted');
   };
 
@@ -359,6 +423,7 @@ const App: React.FC = () => {
       avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`
     };
     setUsers([...users, newUser]);
+    logAction('USER_ADD', `Added user: ${newUser.name} (${newUser.role})`, newUser.id, newUser.name);
     showToast('User created successfully');
   };
 
@@ -391,6 +456,7 @@ const App: React.FC = () => {
     }
 
     setUsers(prev => prev.filter(u => u.id !== userId));
+    logAction('USER_DELETE', `Deleted user: ${targetUser.name}`, targetUser.id, targetUser.name);
     showToast('User deleted');
   };
 
@@ -403,6 +469,10 @@ const App: React.FC = () => {
     setCurrentUser(null);
     setCurrentView('dashboard');
   };
+  
+  const selectedLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
+  const leadTasks = selectedLeadId ? tasks.filter(t => t.leadId === selectedLeadId) : [];
+  const leadHistory = selectedLeadId ? historyLogs.filter(h => h.targetId === selectedLeadId) : [];
 
   // RENDER LOGIC
   if (!currentUser) {
@@ -435,8 +505,16 @@ const App: React.FC = () => {
       <main className="relative z-10 pl-20 md:pl-64 min-h-screen transition-all">
         <div className="max-w-[1600px] mx-auto p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
           
-          {currentView === 'dashboard' && <Dashboard leads={leads} score={flowScore} />}
-          {currentView === 'pipeline' && <Pipeline leads={leads} onMoveLead={handleMoveLead} />}
+          {currentView === 'dashboard' && <Dashboard leads={leads} score={flowScore} history={historyLogs} />}
+          
+          {currentView === 'pipeline' && (
+            <Pipeline 
+                leads={leads} 
+                onMoveLead={handleMoveLead} 
+                onLeadClick={(lead) => setSelectedLeadId(lead.id)}
+            />
+          )}
+          
           {currentView === 'tasks' && (
             <TasksBoard 
               tasks={tasks}
@@ -448,6 +526,7 @@ const App: React.FC = () => {
               onDeleteTask={handleDeleteTask}
             />
           )}
+          
           {currentView === 'lists' && (
             <LeadsList 
               leads={leads} 
@@ -456,8 +535,10 @@ const App: React.FC = () => {
               onEdit={handleEditLead}
               onBulkDelete={handleBulkDeleteLeads}
               onDelete={handleDeleteLead}
+              onLeadClick={(lead) => setSelectedLeadId(lead.id)}
             />
           )}
+          
           {currentView === 'users' && (
             <UserManagement 
               users={users}
@@ -467,8 +548,14 @@ const App: React.FC = () => {
               onDeleteUser={handleDeleteUser}
             />
           )}
+          {currentView === 'history' && (
+            <HistoryPage 
+              logs={historyLogs}
+              currentUser={currentUser}
+            />
+          )}
           
-          {(currentView === 'billing' || currentView === 'settings') && (
+          {(currentView === 'settings') && (
             <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
                 <GlassCard className="p-12 border-dashed border-slate-300 dark:border-white/20 bg-transparent">
                     <h2 className="text-2xl font-thin mb-2">Coming Soon</h2>
@@ -488,6 +575,20 @@ const App: React.FC = () => {
           <Plus size={24} />
         </button>
       )}
+      
+      {/* Lead Detail Slide-Over */}
+      <LeadDetailPanel 
+         lead={selectedLead}
+         isOpen={!!selectedLead}
+         onClose={() => setSelectedLeadId(null)}
+         linkedTasks={leadTasks}
+         history={leadHistory}
+         onUpdateNotes={handleUpdateLeadNotes}
+         onEditLead={(lead) => {
+            setSelectedLeadId(null);
+            handleEditLead(lead);
+         }}
+      />
 
       {/* Add/Edit Lead Modal */}
       {showAddModal && (

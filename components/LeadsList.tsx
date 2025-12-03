@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Lead } from '../types';
 import { Badge, GlassInput } from './GlassComponents';
@@ -12,12 +11,13 @@ interface LeadsListProps {
   onEdit: (lead: Lead) => void;
   onBulkDelete: (ids: string[]) => void;
   onDelete: (id: string) => void;
+  onLeadClick: (lead: Lead) => void;
 }
 
 const LEAD_SOURCES = ['Direct', 'Social', 'Referral', 'Ads'];
 const LEAD_TYPES = ['Inbound', 'Outbound', 'Referral', 'Partner', 'Cold'];
 
-const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, onBulkDelete, onDelete }) => {
+const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, onBulkDelete, onDelete, onLeadClick }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -63,11 +63,9 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
 
   const toggleSelectAll = () => {
     if (isSelectionMode && selectedIds.size === filteredLeads.length && filteredLeads.length > 0) {
-      // If already in mode and all visible selected, exit mode
       setIsSelectionMode(false);
       setSelectedIds(new Set());
     } else {
-      // Enter mode and select all visible
       setIsSelectionMode(true);
       setSelectedIds(new Set(filteredLeads.map(l => l.id)));
     }
@@ -269,7 +267,15 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                 <tr 
                   key={lead.id} 
                   className={`group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
-                  onClick={() => toggleSelectOne(lead.id)}
+                  onClick={() => {
+                     // If selection mode is active, row click toggles selection
+                     // If not active, row click opens detail view
+                     if(isSelectionMode) {
+                        toggleSelectOne(lead.id);
+                     } else {
+                        onLeadClick(lead);
+                     }
+                  }}
                 >
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
                     {isSelectionMode && (

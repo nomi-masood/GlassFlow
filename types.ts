@@ -14,6 +14,7 @@ export interface Lead {
   lostReason?: string;
   type?: string;
   source?: string;
+  notes?: string;
 }
 
 export interface PipelineColumn {
@@ -22,7 +23,7 @@ export interface PipelineColumn {
   color: string;
 }
 
-export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'users' | 'billing' | 'settings';
+export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'users' | 'history' | 'settings';
 
 export interface FlowState {
   score: number;
@@ -65,4 +66,17 @@ export interface Task {
   type?: string;
   leadId?: string;
   attachments?: Attachment[];
+}
+
+export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE';
+
+export interface HistoryLog {
+  id: string;
+  action: ActionType;
+  userId: string;
+  userName: string;
+  targetId?: string;
+  targetName?: string;
+  details: string;
+  timestamp: string;
 }

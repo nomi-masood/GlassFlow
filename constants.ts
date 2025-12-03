@@ -1,5 +1,5 @@
 
-import { Lead, PipelineColumn, User, Task } from './types';
+import { Lead, PipelineColumn, User, Task, HistoryLog } from './types';
 
 export const PIPELINE_COLUMNS: PipelineColumn[] = [
   { id: 'prospect', title: 'Prospect', color: 'bg-blue-500' },
@@ -20,7 +20,9 @@ export const MOCK_LEADS: Lead[] = [
     stage: 'qualified',
     tags: ['SaaS', 'High Value'],
     lastActive: '2h ago',
-    avatarUrl: 'https://picsum.photos/100/100?random=1'
+    avatarUrl: 'https://picsum.photos/100/100?random=1',
+    source: 'Direct',
+    type: 'Inbound'
   },
   {
     id: '2',
@@ -31,7 +33,9 @@ export const MOCK_LEADS: Lead[] = [
     stage: 'prospect',
     tags: ['Agency'],
     lastActive: '1d ago',
-    avatarUrl: 'https://picsum.photos/100/100?random=2'
+    avatarUrl: 'https://picsum.photos/100/100?random=2',
+    source: 'Referral',
+    type: 'Referral'
   },
   {
     id: '3',
@@ -42,7 +46,9 @@ export const MOCK_LEADS: Lead[] = [
     stage: 'proposal',
     tags: ['Enterprise', 'Q3'],
     lastActive: '4h ago',
-    avatarUrl: 'https://picsum.photos/100/100?random=3'
+    avatarUrl: 'https://picsum.photos/100/100?random=3',
+    source: 'Social',
+    type: 'Inbound'
   },
   {
     id: '4',
@@ -53,7 +59,9 @@ export const MOCK_LEADS: Lead[] = [
     stage: 'won',
     tags: ['Legal'],
     lastActive: '1w ago',
-    avatarUrl: 'https://picsum.photos/100/100?random=4'
+    avatarUrl: 'https://picsum.photos/100/100?random=4',
+    source: 'Direct',
+    type: 'Outbound'
   },
   {
     id: '5',
@@ -64,7 +72,9 @@ export const MOCK_LEADS: Lead[] = [
     stage: 'contacted',
     tags: ['VIP'],
     lastActive: '5m ago',
-    avatarUrl: 'https://picsum.photos/100/100?random=5'
+    avatarUrl: 'https://picsum.photos/100/100?random=5',
+    source: 'Ads',
+    type: 'Cold'
   },
 ];
 
@@ -134,5 +144,28 @@ export const MOCK_TASKS: Task[] = [
     status: 'todo',
     priority: 'high',
     dueDate: '2023-11-12'
+  }
+];
+
+export const MOCK_HISTORY: HistoryLog[] = [
+  {
+    id: 'h1',
+    action: 'LEAD_STAGE_CHANGE',
+    userId: 'u1',
+    userName: 'Alex Founder',
+    targetId: '4',
+    targetName: 'Mike Ross',
+    details: 'Moved from Proposal to Won',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() // 1 day ago
+  },
+  {
+    id: 'h2',
+    action: 'TASK_CREATE',
+    userId: 'u2',
+    userName: 'Jordan Sales',
+    targetId: 't2',
+    targetName: 'Follow up with Nexus Tech',
+    details: 'Created new task assigned to Taylor Rep',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() // 2 hours ago
   }
 ];

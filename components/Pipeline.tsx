@@ -7,9 +7,10 @@ import { MoreHorizontal, GripVertical } from 'lucide-react';
 interface PipelineProps {
   leads: Lead[];
   onMoveLead: (leadId: string, newStage: Stage) => void;
+  onLeadClick: (lead: Lead) => void;
 }
 
-const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead }) => {
+const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
@@ -75,7 +76,10 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead }) => {
                       onDragStart={(e) => handleDragStart(e, lead.id)}
                       className="cursor-grab active:cursor-grabbing group relative"
                     >
-                      <GlassCard className="p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5">
+                      <GlassCard 
+                        onClick={() => onLeadClick(lead)}
+                        className="p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5 cursor-pointer"
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <Badge color={column.color}>{lead.tags[0] || 'Lead'}</Badge>
                           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
