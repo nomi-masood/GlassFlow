@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, Role } from '../types';
 import { GlassCard, GlassButton, GlassInput, Badge } from './GlassComponents';
-import { Search, Plus, Trash2, Edit, Shield, CheckCircle, XCircle, MoreVertical, X, Filter } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Shield, CheckCircle, XCircle, MoreVertical, X, Filter, AlertTriangle } from 'lucide-react';
 
 interface UserManagementProps {
   users: User[];
@@ -26,6 +26,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
     role: 'user' as Role,
     status: 'active' as 'active' | 'inactive'
   });
+
+  // Delete Confirmation Modal State
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    user?: User;
+  }>({ show: false });
 
   const canManageUsers = currentUser.role === 'admin' || currentUser.role === 'manager';
 
@@ -198,6 +204,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button 
+                        type="button"
                         onClick={() => handleOpenModal(user)}
                         className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-white/10 rounded-lg transition-all"
                         title="Edit User"
@@ -207,11 +214,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
                       
                       {canDeleteTargetUser(user) && (
                         <button 
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-                              onDeleteUser(user.id);
-                            }
-                          }}
+                          type="button"
+                          onClick={() => setDeleteModal({ show: true, user })}
                           className="p-2 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all"
                           title="Delete User"
                         >
@@ -313,6 +317,48 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
               </form>
             </GlassCard>
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && deleteModal.user && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" 
+              onClick={() => setDeleteModal({ show: false })} 
+            />
+            <div className="relative w-full max-w-sm animate-scale-in">
+                <GlassCard className="p-6 border-white/20 bg-white/90 dark:bg-[#15152a]/95 shadow-2xl">
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-4 text-rose-500">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h2 className="text-xl font-medium text-slate-800 dark:text-white mb-2">Confirm Deletion</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Are you sure you want to delete <span className="font-semibold text-slate-900 dark:text-white">{deleteModal.user.name}</span>? This action cannot be undone.
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <GlassButton 
+                            variant="ghost" 
+                            onClick={() => setDeleteModal({ show: false })}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </GlassButton>
+                        <GlassButton 
+                            variant="danger" 
+                            onClick={() => {
+                                if (deleteModal.user) onDeleteUser(deleteModal.user.id);
+                                setDeleteModal({ show: false });
+                            }}
+                            className="flex-1"
+                        >
+                            Delete
+                        </GlassButton>
+                    </div>
+                </GlassCard>
+            </div>
         </div>
       )}
     </div>

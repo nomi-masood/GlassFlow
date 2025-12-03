@@ -1,7 +1,8 @@
+
 import React, { useRef, useState, useEffect } from 'react';
 import { Lead } from '../types';
-import { Badge, GlassInput } from './GlassComponents';
-import { Search, Filter, Plus, Upload, Trash2, CheckSquare, Square, MoreVertical, X, ChevronDown, Edit } from 'lucide-react';
+import { Badge, GlassInput, GlassCard, GlassButton } from './GlassComponents';
+import { Search, Filter, Plus, Upload, Trash2, CheckSquare, Square, MoreVertical, X, ChevronDown, Edit, AlertTriangle } from 'lucide-react';
 import { PIPELINE_COLUMNS } from '../constants';
 
 interface LeadsListProps {
@@ -21,6 +22,15 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  
+  // Delete Modal State
+  const [deleteModal, setDeleteModal] = useState<{
+    show: boolean;
+    type: 'single' | 'bulk';
+    targetId?: string;
+    targetName?: string;
+    count?: number;
+  }>({ show: false, type: 'single' });
   
   // Filtering State
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,12 +93,33 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
     setSelectedIds(newSet);
   };
 
-  const handleBulkDelete = () => {
+  const initiateBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`Are you sure you want to delete ${selectedIds.size} leads? This action cannot be undone.`)) {
+    setDeleteModal({
+      show: true,
+      type: 'bulk',
+      count: selectedIds.size
+    });
+  };
+
+  const initiateSingleDelete = (id: string, name: string) => {
+    setDeleteModal({
+      show: true,
+      type: 'single',
+      targetId: id,
+      targetName: name
+    });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModal.type === 'bulk') {
       onBulkDelete(Array.from(selectedIds));
       setIsSelectionMode(false);
+      setSelectedIds(new Set());
+    } else if (deleteModal.type === 'single' && deleteModal.targetId) {
+      onDelete(deleteModal.targetId);
     }
+    setDeleteModal({ show: false, type: 'single' });
   };
 
   const clearFilters = () => {
@@ -106,7 +137,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
         <div className="flex gap-3 w-full md:w-auto">
           {selectedIds.size > 0 ? (
              <button 
-               onClick={handleBulkDelete}
+               onClick={initiateBulkDelete}
                className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
              >
                <Trash2 size={16} />
@@ -268,8 +299,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                   key={lead.id} 
                   className={`group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
                   onClick={() => {
-                     // If selection mode is active, row click toggles selection
-                     // If not active, row click opens detail view
                      if(isSelectionMode) {
                         toggleSelectOne(lead.id);
                      } else {
@@ -322,6 +351,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-1">
                        <button 
+                         type="button"
                          onClick={(e) => {
                            e.stopPropagation();
                            onEdit(lead);
@@ -333,13 +363,12 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                          <Edit size={18} />
                        </button>
                        <button 
+                         type="button"
                          onClick={(e) => {
                            e.stopPropagation();
-                           if(window.confirm(`Are you sure you want to delete ${lead.name}?`)) {
-                             onDelete(lead.id);
-                           }
+                           initiateSingleDelete(lead.id, lead.name);
                          }}
-                         className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all"
+                         className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all z-10"
                          title="Delete Lead"
                          aria-label={`Delete ${lead.name}`}
                        >
@@ -360,6 +389,48 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
           </tbody>
         </table>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" 
+              onClick={() => setDeleteModal({ ...deleteModal, show: false })} 
+            />
+            <div className="relative w-full max-w-sm animate-scale-in">
+                <GlassCard className="p-6 border-white/20 bg-white/90 dark:bg-[#15152a]/95 shadow-2xl">
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-4 text-rose-500">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h2 className="text-xl font-medium text-slate-800 dark:text-white mb-2">Confirm Deletion</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            {deleteModal.type === 'single' 
+                                ? <>Are you sure you want to delete <span className="font-semibold text-slate-900 dark:text-white">{deleteModal.targetName}</span>? This action cannot be undone.</>
+                                : <>Are you sure you want to delete <span className="font-semibold text-slate-900 dark:text-white">{deleteModal.count} leads</span>? This action cannot be undone.</>
+                            }
+                        </p>
+                    </div>
+                    <div className="flex gap-3">
+                        <GlassButton 
+                            variant="ghost" 
+                            onClick={() => setDeleteModal({ ...deleteModal, show: false })}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </GlassButton>
+                        <GlassButton 
+                            variant="danger" 
+                            onClick={confirmDelete}
+                            className="flex-1"
+                        >
+                            Delete
+                        </GlassButton>
+                    </div>
+                </GlassCard>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

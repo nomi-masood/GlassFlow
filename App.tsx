@@ -57,14 +57,15 @@ const App: React.FC = () => {
 
   // Add/Edit Lead Form State
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
-  const [newLead, setNewLead] = useState<{name: string, company: string, email: string, value: string, type: string, source: string, stage: Stage}>({ 
+  const [newLead, setNewLead] = useState<{name: string, company: string, email: string, value: string, type: string, source: string, stage: Stage, notes: string}>({ 
     name: '', 
     company: '', 
     email: '',
     value: '', 
     type: 'Inbound',
     source: 'Direct',
-    stage: 'prospect'
+    stage: 'prospect',
+    notes: ''
   });
 
   useEffect(() => {
@@ -147,7 +148,7 @@ const App: React.FC = () => {
 
   const openAddModal = () => {
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect' });
+    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect', notes: '' });
     setShowAddModal(true);
   };
 
@@ -160,7 +161,8 @@ const App: React.FC = () => {
       value: lead.value.toString(),
       type: lead.type || 'Inbound',
       source: lead.source || 'Direct',
-      stage: lead.stage
+      stage: lead.stage,
+      notes: lead.notes || ''
     });
     setShowAddModal(true);
   };
@@ -193,7 +195,8 @@ const App: React.FC = () => {
             stage: newLead.stage,
             type: newLead.type,
             source: newLead.source,
-            tags: newTags
+            tags: newTags,
+            notes: newLead.notes
           };
         }
         return l;
@@ -213,7 +216,8 @@ const App: React.FC = () => {
           source: newLead.source,
           tags: [newLead.type, 'New'],
           lastActive: 'Just now',
-          avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 100)}`
+          avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 100)}`,
+          notes: newLead.notes
       };
       setLeads([...leads, lead]);
       setFlowScore(s => s + 20);
@@ -224,18 +228,21 @@ const App: React.FC = () => {
 
     setShowAddModal(false);
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect' });
+    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect', notes: '' });
   };
   
   // Handler for Lead Detail Panel notes update
   const handleUpdateLeadNotes = (leadId: string, notes: string) => {
+    const lead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => {
         if (l.id === leadId) {
             return { ...l, notes };
         }
         return l;
     }));
-    logAction('LEAD_UPDATE', 'Updated lead notes', leadId, undefined);
+    // Improved logging with lead name
+    logAction('LEAD_UPDATE', `Updated notes for ${lead?.name || 'lead'}`, leadId, lead?.name);
+    showToast('Notes saved');
   };
 
   const handleBulkDeleteLeads = (ids: string[]) => {
@@ -588,13 +595,14 @@ const App: React.FC = () => {
             setSelectedLeadId(null);
             handleEditLead(lead);
          }}
+         onStageChange={handleMoveLead}
       />
 
       {/* Add/Edit Lead Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-md animate-scale-in">
+          <div className="relative w-full max-w-md animate-scale-in max-h-[90vh] overflow-y-auto custom-scrollbar">
             <GlassCard className="p-8 border-white/20 bg-white/80 dark:bg-[#15152a]/90 shadow-2xl">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-thin text-slate-800 dark:text-white">
@@ -696,6 +704,16 @@ const App: React.FC = () => {
                       <LayoutTemplate className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                     </div>
                   </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Notes</label>
+                  <textarea 
+                    className="glass-input-base rounded-xl px-4 py-2 font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/30 transition-all w-full resize-none h-24"
+                    placeholder="Add details regarding this lead..."
+                    value={newLead.notes}
+                    onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
+                  />
+                </div>
                 
                 <div className="pt-4 flex gap-3">
                   <GlassButton variant="ghost" className="flex-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" onClick={() => setShowAddModal(false)}>Cancel</GlassButton>
