@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlassFlow CRM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-color: #F8FAFF;
+        --text-color: #0F172A;
+        --glass-panel-bg: rgba(255, 255, 255, 0.7);
+        --glass-border: rgba(0, 0, 0, 0.06);
+        --glass-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%);
+        --glass-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        --glass-input-bg: rgba(0, 0, 0, 0.03);
+        --glass-input-border: rgba(0, 0, 0, 0.1);
+      }
+
+      .dark {
+        --bg-color: #0F0F23;
+        --text-color: #F8FAFF;
+        --glass-panel-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-card-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+        --glass-card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        --glass-input-bg: rgba(255, 255, 255, 0.05);
+        --glass-input-border: rgba(255, 255, 255, 0.1);
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        overflow-x: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(156, 163, 175, 0.5);
+        border-radius: 3px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(156, 163, 175, 0.7);
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      
+      /* Glass Utilities */
+      .glass-panel {
+        background: var(--glass-panel-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        transition: all 0.3s ease;
+      }
+      
+      .glass-card {
+        background: var(--glass-card-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--glass-card-shadow);
+        transition: all 0.3s ease;
+      }
+
+      .glass-input-base {
+        background: var(--glass-input-bg);
+        border: 1px solid var(--glass-input-border);
+      }
+      
+      .glass-button {
+        background: var(--glass-input-bg);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--glass-border);
+        transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      .glass-button:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 0 15px rgba(165, 180, 252, 0.2);
+      }
+      .dark .glass-button:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+      html:not(.dark) .glass-button:hover {
+        background: rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      
+      .text-glow {
+        text-shadow: 0 0 20px rgba(255,255,255,0.3);
+      }
+      html:not(.dark) .text-glow {
+        text-shadow: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

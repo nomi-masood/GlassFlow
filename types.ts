@@ -1,0 +1,68 @@
+
+export type Stage = 'prospect' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost';
+
+export interface Lead {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  value: number;
+  stage: Stage;
+  tags: string[];
+  lastActive: string;
+  avatarUrl?: string;
+  lostReason?: string;
+  type?: string;
+  source?: string;
+}
+
+export interface PipelineColumn {
+  id: Stage;
+  title: string;
+  color: string;
+}
+
+export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'users' | 'billing' | 'settings';
+
+export interface FlowState {
+  score: number;
+  streak: number;
+  level: number;
+}
+
+export type Role = 'admin' | 'manager' | 'user';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  status: 'active' | 'inactive';
+  avatarUrl: string;
+  branchId?: string;
+}
+
+export type TaskStatus = 'todo' | 'in-progress' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high';
+
+export interface Attachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  assigneeId: string;
+  creatorId: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string;
+  type?: string;
+  leadId?: string;
+  attachments?: Attachment[];
+}
