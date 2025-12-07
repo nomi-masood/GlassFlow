@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType } from './types';
 import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY } from './constants';
@@ -278,7 +279,7 @@ const App: React.FC = () => {
         return;
       }
 
-      // Robust CSV Parsing Function
+      // Robust CSV Parsing Function to handle quotes and newlines
       const parseCSV = (str: string) => {
         const arr: string[][] = [];
         let quote = false;  
@@ -322,6 +323,7 @@ const App: React.FC = () => {
         return;
       }
 
+      // Basic Header Mapping
       const headers = cleanRows[0].map(h => h.toLowerCase().trim());
       const hasHeaders = headers.some(h => ['name', 'company', 'email', 'value', 'amount', 'stage'].includes(h));
 
@@ -330,6 +332,7 @@ const App: React.FC = () => {
       let emailIdx = headers.findIndex(h => h.includes('email'));
       let valueIdx = headers.findIndex(h => h.includes('value') || h.includes('amount') || h.includes('revenue'));
 
+      // Fallbacks
       if (nameIdx === -1) nameIdx = 0;
       if (companyIdx === -1) companyIdx = 1;
       if (emailIdx === -1) emailIdx = 2;
@@ -354,7 +357,9 @@ const App: React.FC = () => {
           stage: 'prospect',
           tags: ['Imported'],
           lastActive: 'Just now',
-          avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`
+          avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
+          type: 'Inbound',
+          source: 'Direct'
         };
         newLeads.push(lead);
       }
