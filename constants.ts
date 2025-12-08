@@ -10,6 +10,10 @@ export const PIPELINE_COLUMNS: PipelineColumn[] = [
   { id: 'lost', title: 'Lost', color: 'bg-rose-500' },
 ];
 
+export const LEAD_SOURCES = ['Direct', 'Social', 'Referral', 'Ads'];
+
+export const LEAD_TYPES = ['Inbound', 'Outbound', 'Referral', 'Partner', 'Cold'];
+
 export const MOCK_LEADS: Lead[] = [
   {
     id: '1',

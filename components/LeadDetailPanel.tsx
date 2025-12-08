@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Lead, Task, HistoryLog } from '../types';
+import { Lead, Task, HistoryLog, Stage } from '../types';
+import { PIPELINE_COLUMNS } from '../constants';
 import { GlassCard, GlassButton, Badge } from './GlassComponents';
-import { X, Mail, Building, DollarSign, Calendar, Tag, FileText, CheckSquare, Clock, Edit, Save, Activity } from 'lucide-react';
+import { X, Mail, Building, DollarSign, Calendar, Tag, FileText, CheckSquare, Clock, Edit, Save, Activity, ChevronDown } from 'lucide-react';
 
 interface LeadDetailPanelProps {
   lead: Lead | null;
@@ -11,6 +12,7 @@ interface LeadDetailPanelProps {
   history: HistoryLog[];
   onUpdateNotes: (leadId: string, notes: string) => void;
   onEditLead: (lead: Lead) => void;
+  onStageChange: (leadId: string, newStage: Stage) => void;
 }
 
 const LeadDetailPanel: React.FC<LeadDetailPanelProps> = ({ 
@@ -20,7 +22,8 @@ const LeadDetailPanel: React.FC<LeadDetailPanelProps> = ({
   linkedTasks, 
   history,
   onUpdateNotes,
-  onEditLead
+  onEditLead,
+  onStageChange
 }) => {
   const [notes, setNotes] = useState('');
   const [isNotesDirty, setIsNotesDirty] = useState(false);
@@ -98,7 +101,18 @@ const LeadDetailPanel: React.FC<LeadDetailPanelProps> = ({
                 <Activity size={16} />
                 <span className="text-xs font-bold uppercase tracking-wide">Stage</span>
               </div>
-              <Badge color={getStageColor(lead.stage)}>{lead.stage}</Badge>
+              <div className="relative">
+                <select 
+                  className="w-full appearance-none bg-transparent text-sm font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer py-1 pr-6"
+                  value={lead.stage}
+                  onChange={(e) => onStageChange(lead.id, e.target.value as Stage)}
+                >
+                  {PIPELINE_COLUMNS.map(col => (
+                    <option key={col.id} value={col.id} className="text-slate-900 bg-white dark:bg-slate-800">{col.title}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 text-indigo-500/50 pointer-events-none" size={14} />
+              </div>
             </GlassCard>
           </div>
 

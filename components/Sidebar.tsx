@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Kanban, Users, CreditCard, Settings, LogOut, Zap, Moon, Sun, CheckSquare, UserCog, History } from 'lucide-react';
+import { LayoutDashboard, Kanban, Users, CreditCard, Settings, LogOut, Zap, Moon, Sun, CheckSquare, UserCog, History, ListChecks } from 'lucide-react';
 import { View, User } from '../types';
 
 interface SidebarProps {
@@ -17,6 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView, isDark, to
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'pipeline', icon: Kanban, label: 'Pipeline' },
     { id: 'tasks', icon: CheckSquare, label: 'Tasks' },
+    { id: 'task-feed', icon: ListChecks, label: 'Task Feed' },
     { id: 'lists', icon: Users, label: 'Leads' },
     { id: 'users', icon: UserCog, label: 'Users', roles: ['admin', 'manager'] },
     { id: 'history', icon: History, label: 'History', roles: ['admin', 'manager'] },

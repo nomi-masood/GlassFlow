@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType } from './types';
-import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY } from './constants';
+import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY, LEAD_SOURCES, LEAD_TYPES } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Pipeline from './components/Pipeline';
 import LeadsList from './components/LeadsList';
 import TasksBoard from './components/TasksBoard';
+import TaskFeed from './components/TaskFeed';
 import UserManagement from './components/UserManagement';
 import HistoryPage from './components/HistoryPage';
 import LeadDetailPanel from './components/LeadDetailPanel';
@@ -63,8 +64,8 @@ const App: React.FC = () => {
     company: '', 
     email: '',
     value: '', 
-    type: 'Inbound',
-    source: 'Direct',
+    type: LEAD_TYPES[0],
+    source: LEAD_SOURCES[0],
     stage: 'prospect',
     notes: ''
   });
@@ -149,7 +150,7 @@ const App: React.FC = () => {
 
   const openAddModal = () => {
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect', notes: '' });
+    setNewLead({ name: '', company: '', email: '', value: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
     setShowAddModal(true);
   };
 
@@ -160,8 +161,8 @@ const App: React.FC = () => {
       company: lead.company,
       email: lead.email,
       value: lead.value.toString(),
-      type: lead.type || 'Inbound',
-      source: lead.source || 'Direct',
+      type: lead.type || LEAD_TYPES[0],
+      source: lead.source || LEAD_SOURCES[0],
       stage: lead.stage,
       notes: lead.notes || ''
     });
@@ -229,7 +230,7 @@ const App: React.FC = () => {
 
     setShowAddModal(false);
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: 'Inbound', source: 'Direct', stage: 'prospect', notes: '' });
+    setNewLead({ name: '', company: '', email: '', value: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
   };
   
   // Handler for Lead Detail Panel notes update
@@ -273,104 +274,109 @@ const App: React.FC = () => {
     reader.onerror = () => showToast('Failed to read file');
 
     reader.onload = (e) => {
-      const text = e.target?.result as string;
-      if (!text || text.trim().length === 0) {
-        showToast('File is empty');
-        return;
-      }
-
-      // Robust CSV Parsing Function to handle quotes and newlines
-      const parseCSV = (str: string) => {
-        const arr: string[][] = [];
-        let quote = false;  
-        let col = 0, row = 0;
-        
-        for (let c = 0; c < str.length; c++) {
-          const cc = str[c];
-          const nc = str[c+1];
-          arr[row] = arr[row] || [];
-          arr[row][col] = arr[row][col] || '';
-          
-          if (cc == '"' && quote && nc == '"') { 
-            arr[row][col] += cc; ++c; continue; 
-          }
-          if (cc == '"') { 
-            quote = !quote; continue; 
-          }
-          if (cc == ',' && !quote) { 
-            ++col; continue; 
-          }
-          if (cc == '\r' && nc == '\n' && !quote) { 
-            ++row; col = 0; ++c; continue; 
-          }
-          if (cc == '\n' && !quote) { 
-            ++row; col = 0; continue; 
-          }
-          if (cc == '\r' && !quote) { 
-            ++row; col = 0; continue; 
-          }
-          arr[row][col] += cc;
+      try {
+        const text = e.target?.result as string;
+        if (!text || text.trim().length === 0) {
+          showToast('File is empty');
+          return;
         }
-        return arr;
-      };
 
-      const rows = parseCSV(text);
-      
-      const cleanRows = rows.filter(r => r.length > 0 && r.some(c => c.trim().length > 0));
-
-      if (cleanRows.length === 0) {
-        showToast('No data found in CSV');
-        return;
-      }
-
-      // Basic Header Mapping
-      const headers = cleanRows[0].map(h => h.toLowerCase().trim());
-      const hasHeaders = headers.some(h => ['name', 'company', 'email', 'value', 'amount', 'stage'].includes(h));
-
-      let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('contact'));
-      let companyIdx = headers.findIndex(h => h.includes('company') || h.includes('org'));
-      let emailIdx = headers.findIndex(h => h.includes('email'));
-      let valueIdx = headers.findIndex(h => h.includes('value') || h.includes('amount') || h.includes('revenue'));
-
-      // Fallbacks
-      if (nameIdx === -1) nameIdx = 0;
-      if (companyIdx === -1) companyIdx = 1;
-      if (emailIdx === -1) emailIdx = 2;
-      if (valueIdx === -1) valueIdx = 3;
-
-      const newLeads: Lead[] = [];
-      const startIndex = hasHeaders ? 1 : 0;
-
-      for (let i = startIndex; i < cleanRows.length; i++) {
-        const row = cleanRows[i];
-        if (row.length < 2) continue; 
-
-        const rawValue = row[valueIdx] || '0';
-        const cleanValue = parseFloat(rawValue.replace(/[^0-9.-]+/g, ''));
-
-        const lead: Lead = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: row[nameIdx] || 'Imported Lead',
-          company: row[companyIdx] || 'Unknown Company',
-          email: row[emailIdx] || '',
-          value: isNaN(cleanValue) ? 0 : cleanValue,
-          stage: 'prospect',
-          tags: ['Imported'],
-          lastActive: 'Just now',
-          avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
-          type: 'Inbound',
-          source: 'Direct'
+        // Robust CSV Parsing Function to handle quotes and newlines
+        const parseCSV = (str: string) => {
+          const arr: string[][] = [];
+          let quote = false;  
+          let col = 0, row = 0;
+          
+          for (let c = 0; c < str.length; c++) {
+            const cc = str[c];
+            const nc = str[c+1];
+            arr[row] = arr[row] || [];
+            arr[row][col] = arr[row][col] || '';
+            
+            if (cc == '"' && quote && nc == '"') { 
+              arr[row][col] += cc; ++c; continue; 
+            }
+            if (cc == '"') { 
+              quote = !quote; continue; 
+            }
+            if (cc == ',' && !quote) { 
+              ++col; continue; 
+            }
+            if (cc == '\r' && nc == '\n' && !quote) { 
+              ++row; col = 0; ++c; continue; 
+            }
+            if (cc == '\n' && !quote) { 
+              ++row; col = 0; continue; 
+            }
+            if (cc == '\r' && !quote) { 
+              ++row; col = 0; continue; 
+            }
+            arr[row][col] += cc;
+          }
+          return arr;
         };
-        newLeads.push(lead);
-      }
 
-      if (newLeads.length > 0) {
-        setLeads(prev => [...prev, ...newLeads]);
-        setFlowScore(s => s + (newLeads.length * 5));
-        logAction('LEAD_CREATE', `Imported ${newLeads.length} leads via CSV`, 'bulk_import', 'Bulk Import');
-        showToast(`Success! Imported ${newLeads.length} leads.`);
-      } else {
-        showToast('Could not parse any valid leads from file.');
+        const rows = parseCSV(text);
+        
+        const cleanRows = rows.filter(r => r.length > 0 && r.some(c => c.trim().length > 0));
+
+        if (cleanRows.length === 0) {
+          showToast('No data found in CSV');
+          return;
+        }
+
+        // Basic Header Mapping
+        const headers = cleanRows[0].map(h => h.toLowerCase().trim());
+        const hasHeaders = headers.some(h => ['name', 'company', 'email', 'value', 'amount', 'stage'].includes(h));
+
+        let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('contact'));
+        let companyIdx = headers.findIndex(h => h.includes('company') || h.includes('org'));
+        let emailIdx = headers.findIndex(h => h.includes('email'));
+        let valueIdx = headers.findIndex(h => h.includes('value') || h.includes('amount') || h.includes('revenue'));
+
+        // Fallbacks
+        if (nameIdx === -1) nameIdx = 0;
+        if (companyIdx === -1) companyIdx = 1;
+        if (emailIdx === -1) emailIdx = 2;
+        if (valueIdx === -1) valueIdx = 3;
+
+        const newLeads: Lead[] = [];
+        const startIndex = hasHeaders ? 1 : 0;
+
+        for (let i = startIndex; i < cleanRows.length; i++) {
+          const row = cleanRows[i];
+          if (row.length < 2) continue; 
+
+          const rawValue = row[valueIdx] || '0';
+          const cleanValue = parseFloat(rawValue.replace(/[^0-9.-]+/g, ''));
+
+          const lead: Lead = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: row[nameIdx] || 'Imported Lead',
+            company: row[companyIdx] || 'Unknown Company',
+            email: row[emailIdx] || '',
+            value: isNaN(cleanValue) ? 0 : cleanValue,
+            stage: 'prospect',
+            tags: ['Imported'],
+            lastActive: 'Just now',
+            avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
+            type: 'Inbound',
+            source: 'Direct'
+          };
+          newLeads.push(lead);
+        }
+
+        if (newLeads.length > 0) {
+          setLeads(prev => [...prev, ...newLeads]);
+          setFlowScore(s => s + (newLeads.length * 5));
+          logAction('LEAD_CREATE', `Imported ${newLeads.length} leads via CSV`, 'bulk_import', 'Bulk Import');
+          showToast(`Success! Imported ${newLeads.length} leads.`);
+        } else {
+          showToast('Could not parse any valid leads from file.');
+        }
+      } catch (err) {
+        console.error('CSV Parsing Error:', err);
+        showToast('Error parsing CSV file. Please check format.');
       }
     };
     reader.readAsText(file);
@@ -378,16 +384,61 @@ const App: React.FC = () => {
 
   // Task Handling
   const handleUpdateTaskStatus = (taskId: string, status: TaskStatus) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    // Check if the task is being moved to 'review' (visual column 3)
+    let finalStatus = status;
+
+    if (status === 'review') {
+      // If creator is current user (or creator is same as assignee), task is effectively done
+      if (task.creatorId === currentUser?.id) {
+          finalStatus = 'done'; // Auto accept
+          setFlowScore(s => s + 15);
+          showToast('Task Complete! +15 Points');
+      } else {
+          // If assigned to someone else, it goes to review
+          finalStatus = 'review';
+          showToast('Task submitted for review');
+      }
+    } else if (status === 'done') {
+      // Explicit done (if called directly)
+       setFlowScore(s => s + 15);
+       showToast('Task Complete! +15 Points');
+    }
+
     setTasks(prev => prev.map(t => {
         if (t.id === taskId) {
-            if (status === 'done' && t.status !== 'done') {
-                setFlowScore(s => s + 15);
-                showToast('Task Complete! +15 Points');
-            }
-            return { ...t, status };
+            return { ...t, status: finalStatus };
         }
         return t;
     }));
+  };
+
+  // Task Review Handlers
+  const handleAcceptTask = (taskId: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { ...t, status: 'done' };
+      }
+      return t;
+    }));
+    setFlowScore(s => s + 10); // Bonus for reviewing
+    showToast('Task approved and finalized');
+  };
+
+  const handleDeclineTask = (taskId: string, newAssigneeId?: string) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        return { 
+          ...t, 
+          status: 'todo', 
+          assigneeId: newAssigneeId || t.assigneeId // Update assignee if provided
+        };
+      }
+      return t;
+    }));
+    showToast('Task returned to assignee');
   };
 
   const handleAddTask = (taskData: Partial<Task>) => {
@@ -538,6 +589,16 @@ const App: React.FC = () => {
               onDeleteTask={handleDeleteTask}
             />
           )}
+
+          {currentView === 'task-feed' && (
+            <TaskFeed 
+              tasks={tasks}
+              users={users}
+              currentUser={currentUser}
+              onAccept={handleAcceptTask}
+              onDecline={handleDeclineTask}
+            />
+          )}
           
           {currentView === 'lists' && (
             <LeadsList 
@@ -664,11 +725,9 @@ const App: React.FC = () => {
                         value={newLead.type}
                         onChange={(e) => setNewLead({...newLead, type: e.target.value})}
                       >
-                        <option value="Inbound" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Inbound</option>
-                        <option value="Outbound" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Outbound</option>
-                        <option value="Referral" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Referral</option>
-                        <option value="Partner" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Partner</option>
-                        <option value="Cold" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Cold Lead</option>
+                        {LEAD_TYPES.map(type => (
+                          <option key={type} value={type} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">{type}</option>
+                        ))}
                       </select>
                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
                     </div>
@@ -682,10 +741,9 @@ const App: React.FC = () => {
                         value={newLead.source}
                         onChange={(e) => setNewLead({...newLead, source: e.target.value})}
                       >
-                        <option value="Direct" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Direct</option>
-                        <option value="Social" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Social</option>
-                        <option value="Referral" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Referral</option>
-                        <option value="Ads" className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">Ads</option>
+                        {LEAD_SOURCES.map(source => (
+                          <option key={source} value={source} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">{source}</option>
+                        ))}
                       </select>
                       <Globe className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                     </div>

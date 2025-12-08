@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { HistoryLog, ActionType, User } from '../types';
-import { GlassCard, Badge } from './GlassComponents';
-import { Search, Shield, Filter, Clock, Activity, User as UserIcon } from 'lucide-react';
+import { GlassCard, Badge, GlassButton } from './GlassComponents';
+import { Search, Shield, Filter, Clock, Activity, User as UserIcon, X, Info } from 'lucide-react';
 
 interface HistoryPageProps {
   logs: HistoryLog[];
@@ -12,6 +12,7 @@ interface HistoryPageProps {
 const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAction, setFilterAction] = useState<'all' | ActionType>('all');
+  const [selectedLog, setSelectedLog] = useState<HistoryLog | null>(null);
 
   const canViewHistory = currentUser.role === 'admin' || currentUser.role === 'manager';
 
@@ -121,7 +122,11 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
               {filteredLogs.map((log) => (
-                <tr key={log.id} className="group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors">
+                <tr 
+                  key={log.id} 
+                  onClick={() => setSelectedLog(log)}
+                  className="group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer"
+                >
                   <td className="p-4">
                      <Badge color={getActionColor(log.action)}>
                        {getActionLabel(log.action)}
@@ -134,7 +139,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{log.details}</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300 font-medium truncate max-w-[200px] block">{log.details}</span>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
@@ -166,6 +171,76 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
           </table>
         </GlassCard>
       </div>
+
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setSelectedLog(null)} />
+          <div className="relative w-full max-w-md animate-scale-in">
+            <GlassCard className="p-8 border-white/20 bg-white/80 dark:bg-[#15152a]/90 shadow-2xl">
+              <div className="flex justify-between items-center mb-6 border-b border-slate-200 dark:border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                        <Info size={20} />
+                    </div>
+                    <h2 className="text-xl font-medium text-slate-800 dark:text-white">History Details</h2>
+                </div>
+                <button onClick={() => setSelectedLog(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">User</label>
+                    <div className="mt-1 flex items-center gap-2">
+                        <UserIcon size={16} className="text-slate-400" />
+                        <span className="text-slate-800 dark:text-white font-medium">{selectedLog.userName}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Action</label>
+                    <div className="mt-1">
+                        <Badge color={getActionColor(selectedLog.action)}>{getActionLabel(selectedLog.action)}</Badge>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Date</label>
+                    <div className="mt-1 flex items-center gap-2">
+                        <Clock size={16} className="text-slate-400" />
+                        <span className="text-slate-800 dark:text-white font-medium">{new Date(selectedLog.timestamp).toLocaleString()}</span>
+                    </div>
+                </div>
+
+                {selectedLog.targetName && (
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Target</label>
+                        <div className="mt-1 flex items-center gap-2">
+                            <Activity size={16} className="text-slate-400" />
+                            <span className="text-slate-800 dark:text-white font-medium">{selectedLog.targetName}</span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="pt-2">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Description</label>
+                    <div className="mt-2 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 text-sm text-slate-600 dark:text-slate-300">
+                        {selectedLog.details}
+                    </div>
+                </div>
+              </div>
+              
+              <div className="mt-8">
+                <GlassButton className="w-full justify-center" onClick={() => setSelectedLog(null)}>
+                    Close
+                </GlassButton>
+              </div>
+            </GlassCard>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

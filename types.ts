@@ -23,7 +23,7 @@ export interface PipelineColumn {
   color: string;
 }
 
-export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'users' | 'history' | 'settings';
+export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'task-feed' | 'users' | 'history' | 'settings';
 
 export interface FlowState {
   score: number;
@@ -43,7 +43,7 @@ export interface User {
   branchId?: string;
 }
 
-export type TaskStatus = 'todo' | 'in-progress' | 'done';
+export type TaskStatus = 'todo' | 'in-progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export interface Attachment {

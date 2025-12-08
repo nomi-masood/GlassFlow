@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, User, TaskPriority, Lead, Attachment } from '../types';
 import { GlassCard, Badge, GlassButton, GlassInput } from './GlassComponents';
-import { Calendar, CheckCircle2, Circle, Clock, MoreHorizontal, Plus, User as UserIcon, Filter, Tag, Edit, Trash, Search, Paperclip, FileText, Image as ImageIcon, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Clock, MoreHorizontal, Plus, User as UserIcon, Filter, Tag, Edit, Trash, Search, Paperclip, FileText, Image as ImageIcon, X, ArrowUp, ArrowDown, ListFilter, Download, Lock, CheckSquare } from 'lucide-react';
 import { MOCK_USERS } from '../constants';
 
 interface TasksBoardProps {
@@ -20,6 +20,7 @@ const TASK_TYPES = ['Follow-up', 'Call', 'Meeting', 'Email', 'Research', 'Admin'
 const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUpdateStatus, onAddTask, onEditTask, onDeleteTask }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'mine'>('mine');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'date' | 'priority'>('date');
   const [showAddModal, setShowAddModal] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   
@@ -57,33 +58,33 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
   const [clientSearch, setClientSearch] = useState('');
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
 
-  // Update client search input when editing a task
-  useEffect(() => {
-    if (editingTaskId && newTask.leadId) {
-      const linkedLead = leads.find(l => l.id === newTask.leadId);
-      if (linkedLead) {
-        setClientSearch(linkedLead.name);
-      }
-    } else if (!editingTaskId) {
-        setClientSearch('');
-    }
-  }, [editingTaskId, newTask.leadId, leads]);
-
+  // Updated columns: 'done' tasks are hidden (finalized). The 3rd column is 'review'.
   const columns: { id: TaskStatus; title: string; color: string; icon: React.ElementType }[] = [
     { id: 'todo', title: 'To Do', color: 'bg-slate-500', icon: Circle },
     { id: 'in-progress', title: 'In Progress', color: 'bg-blue-500', icon: Clock },
-    { id: 'done', title: 'Done', color: 'bg-emerald-500', icon: CheckCircle2 },
+    { id: 'review', title: 'Completed (In Review)', color: 'bg-emerald-500', icon: CheckSquare },
   ];
 
   const filteredTasks = tasks.filter(task => {
+    // Hide 'done' (Finalized) tasks from the board
+    if (task.status === 'done') return false;
+
     if (currentUser.role === 'user') return task.assigneeId === currentUser.id;
     return filterMode === 'all' ? true : task.assigneeId === currentUser.id;
   });
 
+  const priorityWeight = { high: 3, medium: 2, low: 1 };
+
   const sortedTasks = [...filteredTasks].sort((a, b) => {
-    const dateA = new Date(a.dueDate).getTime();
-    const dateB = new Date(b.dueDate).getTime();
-    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    if (sortBy === 'priority') {
+      const weightA = priorityWeight[a.priority];
+      const weightB = priorityWeight[b.priority];
+      return sortOrder === 'desc' ? weightA - weightB : weightB - weightA;
+    } else {
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    }
   });
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -116,6 +117,15 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
         attachments: task.attachments || []
     });
     setEditingTaskId(task.id);
+    
+    // Set client search based on leadId
+    if (task.leadId) {
+        const lead = leads.find(l => l.id === task.leadId);
+        setClientSearch(lead ? lead.name : '');
+    } else {
+        setClientSearch('');
+    }
+
     setActiveMenuTaskId(null);
     setShowAddModal(true);
   };
@@ -217,15 +227,26 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
         </div>
         
         <div className="flex gap-3">
-          {/* Sort Button */}
-          <button 
-            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="px-3 py-2 bg-white/50 dark:bg-black/20 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white rounded-xl border border-slate-200 dark:border-white/10 flex items-center gap-2 text-sm font-medium transition-all"
-            title={`Sort by due date ${sortOrder === 'asc' ? 'ascending' : 'descending'}`}
-          >
-            {sortOrder === 'asc' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
-            <span className="hidden md:inline">Due Date</span>
-          </button>
+          {/* Sorting Control */}
+          <div className="flex items-center bg-white/50 dark:bg-black/20 p-1 rounded-xl border border-slate-200 dark:border-white/10">
+             <div className="relative px-2 border-r border-slate-200 dark:border-white/10">
+                 <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'priority')}
+                    className="bg-transparent text-xs font-medium text-slate-600 dark:text-slate-300 focus:outline-none appearance-none pr-4 cursor-pointer py-1.5"
+                 >
+                    <option value="date" className="text-slate-900">Due Date</option>
+                    <option value="priority" className="text-slate-900">Priority</option>
+                 </select>
+             </div>
+             <button 
+                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="px-2 py-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-all"
+                title={`Sort ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+             >
+                {sortOrder === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+             </button>
+          </div>
 
           {currentUser.role !== 'user' && (
             <div className="flex bg-white/50 dark:bg-black/20 p-1 rounded-xl border border-slate-200 dark:border-white/10">
@@ -248,6 +269,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
             onClick={() => {
                 setEditingTaskId(null);
                 setNewTask({ ...defaultTaskState, assigneeId: currentUser.id });
+                setClientSearch('');
                 setShowAddModal(true);
             }}
             className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
@@ -279,103 +301,130 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 pb-10">
-                  {colTasks.map(task => (
-                    <div
-                      key={task.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                      className="cursor-grab active:cursor-grabbing"
-                    >
-                      <GlassCard className="p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5 group relative">
-                        <div className="flex justify-between items-start mb-2 relative">
-                          <div className="flex gap-2">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-medium ${getPriorityColor(task.priority)}`}>
-                              {task.priority}
-                            </span>
-                            {task.type && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-medium">
-                                {task.type}
+                  {colTasks.map(task => {
+                    // Check if current user is the assignee
+                    const isAssignee = task.assigneeId === currentUser.id;
+
+                    return (
+                      <div
+                        key={task.id}
+                        draggable={isAssignee}
+                        onDragStart={(e) => {
+                            if (isAssignee) {
+                                handleDragStart(e, task.id);
+                            } else {
+                                e.preventDefault();
+                            }
+                        }}
+                        className={isAssignee ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
+                        title={!isAssignee ? "Only the user assigned to this task can update its status. Please log in with the assigned account." : ""}
+                      >
+                        <GlassCard className={`p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5 group relative ${!isAssignee ? 'opacity-75 grayscale-[0.3]' : ''}`}>
+                          <div className="flex justify-between items-start mb-2 relative">
+                            <div className="flex gap-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-medium ${getPriorityColor(task.priority)}`}>
+                                {task.priority}
                               </span>
+                              {task.type && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-medium">
+                                  {task.type}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1">
+                                {!isAssignee && (
+                                    <div className="p-1 rounded-full bg-slate-100 dark:bg-white/5">
+                                        <Lock size={12} className="text-slate-400 dark:text-slate-500" />
+                                    </div>
+                                )}
+                                {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
+                                    <button onClick={(e) => { e.stopPropagation(); setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id); }}>
+                                    <MoreHorizontal size={16} className="text-slate-400 hover:text-indigo-500 transition-colors" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {activeMenuTaskId === task.id && (
+                                <>
+                                  <div className="fixed inset-0 z-10" onClick={() => setActiveMenuTaskId(null)} />
+                                  <div className="absolute right-0 top-6 z-20 w-32 glass-panel bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden animate-scale-in">
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); openEditModal(task); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-white/5 hover:text-indigo-600 flex items-center gap-2 font-medium"
+                                  >
+                                    <Edit size={14} /> Edit
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); setActiveMenuTaskId(null); }}
+                                    className="w-full text-left px-4 py-2 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2 font-medium"
+                                  >
+                                    <Trash size={14} /> Delete
+                                  </button>
+                                </div>
+                                </>
                             )}
                           </div>
                           
-                          {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
-                               <button onClick={(e) => { e.stopPropagation(); setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id); }}>
-                                 <MoreHorizontal size={16} className="text-slate-400 hover:text-indigo-500 transition-colors" />
-                               </button>
+                          <h4 className="text-sm font-medium text-slate-800 dark:text-white mb-1">{task.title}</h4>
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">{task.description || 'No description provided.'}</p>
+                          
+                          {task.leadId && (
+                            <div className="mb-3">
+                                <span className="text-[10px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md font-medium border border-indigo-100 dark:border-indigo-500/20">
+                                    Client: {leads.find(l => l.id === task.leadId)?.name || 'Unknown'}
+                                </span>
+                            </div>
                           )}
 
-                          {activeMenuTaskId === task.id && (
-                               <>
-                                <div className="fixed inset-0 z-10" onClick={() => setActiveMenuTaskId(null)} />
-                                <div className="absolute right-0 top-6 z-20 w-32 glass-panel bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden animate-scale-in">
-                                 <button 
-                                   onClick={(e) => { e.stopPropagation(); openEditModal(task); }}
-                                   className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-white/5 hover:text-indigo-600 flex items-center gap-2 font-medium"
-                                 >
-                                   <Edit size={14} /> Edit
-                                 </button>
-                                 <button 
-                                   onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); setActiveMenuTaskId(null); }}
-                                   className="w-full text-left px-4 py-2 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2 font-medium"
-                                 >
-                                   <Trash size={14} /> Delete
-                                 </button>
-                               </div>
-                               </>
+                          {task.attachments && task.attachments.length > 0 && (
+                            <div className="flex gap-2 mb-3">
+                              {task.attachments.slice(0, 3).map((att) => (
+                                <a 
+                                  key={att.id} 
+                                  href={att.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="w-6 h-6 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-500 transition-colors" 
+                                  title={att.name}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {att.type.includes('image') ? <ImageIcon size={10} /> : <FileText size={10} />}
+                                </a>
+                              ))}
+                              {task.attachments.length > 3 && (
+                                <div className="w-6 h-6 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[9px] text-slate-500 dark:text-slate-400 font-medium">
+                                  +{task.attachments.length - 3}
+                                </div>
+                              )}
+                            </div>
                           )}
-                        </div>
-                        
-                        <h4 className="text-sm font-medium text-slate-800 dark:text-white mb-1">{task.title}</h4>
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">{task.description || 'No description provided.'}</p>
-                        
-                        {task.leadId && (
-                           <div className="mb-3">
-                               <span className="text-[10px] bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md font-medium border border-indigo-100 dark:border-indigo-500/20">
-                                   Client: {leads.find(l => l.id === task.leadId)?.name || 'Unknown'}
-                               </span>
-                           </div>
-                        )}
 
-                        {task.attachments && task.attachments.length > 0 && (
-                          <div className="flex gap-2 mb-3">
-                            {task.attachments.slice(0, 3).map((att) => (
-                              <div key={att.id} className="w-6 h-6 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10" title={att.name}>
-                                {att.type.includes('image') ? <ImageIcon size={10} /> : <FileText size={10} />}
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={getUserAvatar(task.assigneeId)} 
+                                alt={getUserName(task.assigneeId)}
+                                title={`Assigned to ${getUserName(task.assigneeId)}`}
+                                className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-[#1E1E2E]" 
+                              />
+                              <div className="flex items-center gap-1 text-xs font-medium text-slate-400">
+                                <Calendar size={12} />
+                                <span>{new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', timeZone: 'UTC'})}</span>
                               </div>
-                            ))}
-                            {task.attachments.length > 3 && (
-                               <div className="w-6 h-6 rounded bg-slate-100 dark:bg-white/10 flex items-center justify-center text-[9px] text-slate-500 dark:text-slate-400 font-medium">
-                                 +{task.attachments.length - 3}
-                               </div>
+                            </div>
+                            {task.attachments && task.attachments.length > 0 && (
+                                <Paperclip size={12} className="text-slate-400" />
                             )}
                           </div>
-                        )}
-
-                        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
-                          <div className="flex items-center gap-2">
-                             <img 
-                               src={getUserAvatar(task.assigneeId)} 
-                               alt={getUserName(task.assigneeId)}
-                               title={`Assigned to ${getUserName(task.assigneeId)}`}
-                               className="w-6 h-6 rounded-full ring-2 ring-white dark:ring-[#1E1E2E]" 
-                             />
-                             <div className="flex items-center gap-1 text-xs font-medium text-slate-400">
-                               <Calendar size={12} />
-                               <span>{new Date(task.dueDate).toLocaleDateString(undefined, {month: 'short', day: 'numeric', timeZone: 'UTC'})}</span>
-                             </div>
-                          </div>
-                          {task.attachments && task.attachments.length > 0 && (
-                              <Paperclip size={12} className="text-slate-400" />
-                          )}
-                        </div>
-                      </GlassCard>
-                    </div>
-                  ))}
+                        </GlassCard>
+                      </div>
+                    );
+                  })}
                   {colTasks.length === 0 && (
                     <div className="h-32 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-2xl flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 gap-2">
                       <div className="p-3 rounded-full bg-slate-100 dark:bg-white/5">
-                        <Icon size={20} className="opacity-50" />
+                        <Clock size={20} className="opacity-50" />
                       </div>
                       <span className="text-xs font-medium">No tasks</span>
                     </div>
@@ -495,11 +544,23 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                         {newTask.attachments.map(att => (
                            <div key={att.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 group">
                               <div className="flex items-center gap-3 overflow-hidden">
-                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                 <a 
+                                    href={att.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                                 >
                                     {att.type.includes('image') ? <ImageIcon size={16} /> : <FileText size={16} />}
-                                 </div>
+                                 </a>
                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-xs font-medium text-slate-800 dark:text-white truncate max-w-[150px]">{att.name}</span>
+                                    <a 
+                                      href={att.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-medium text-slate-800 dark:text-white truncate max-w-[150px] hover:text-indigo-500 transition-colors"
+                                    >
+                                        {att.name}
+                                    </a>
                                     <span className="text-[10px] text-slate-500">{formatFileSize(att.size)}</span>
                                  </div>
                               </div>

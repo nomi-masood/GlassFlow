@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Lead } from '../types';
 import { Badge, GlassInput, GlassCard, GlassButton } from './GlassComponents';
 import { Search, Filter, Plus, Upload, Trash2, CheckSquare, Square, MoreVertical, X, ChevronDown, Edit, AlertTriangle } from 'lucide-react';
-import { PIPELINE_COLUMNS } from '../constants';
+import { PIPELINE_COLUMNS, LEAD_SOURCES, LEAD_TYPES } from '../constants';
 
 interface LeadsListProps {
   leads: Lead[];
@@ -14,9 +14,6 @@ interface LeadsListProps {
   onDelete: (id: string) => void;
   onLeadClick: (lead: Lead) => void;
 }
-
-const LEAD_SOURCES = ['Direct', 'Social', 'Referral', 'Ads'];
-const LEAD_TYPES = ['Inbound', 'Outbound', 'Referral', 'Partner', 'Cold'];
 
 const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, onBulkDelete, onDelete, onLeadClick }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
