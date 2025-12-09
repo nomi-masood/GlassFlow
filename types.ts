@@ -62,7 +62,7 @@ export interface Task {
   attachments?: Attachment[];
 }
 
-export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE';
+export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'TASK_REVIEW' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE';
 
 export interface HistoryLog {
   id: string;

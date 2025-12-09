@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, Role } from '../types';
 import { GlassCard, GlassButton, GlassInput, Badge } from './GlassComponents';
-import { Search, Plus, Trash2, Edit, Shield, CheckCircle, XCircle, MoreVertical, X, Filter, AlertTriangle } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Shield, CheckCircle, XCircle, MoreVertical, X, Filter, AlertTriangle, Camera, User as UserIcon } from 'lucide-react';
 
 interface UserManagementProps {
   users: User[];
@@ -24,8 +24,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
     name: '',
     email: '',
     role: 'user' as Role,
-    status: 'active' as 'active' | 'inactive'
+    status: 'active' as 'active' | 'inactive',
+    avatarUrl: ''
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete Confirmation Modal State
   const [deleteModal, setDeleteModal] = useState<{
@@ -78,7 +81,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
         name: user.name,
         email: user.email,
         role: user.role,
-        status: user.status
+        status: user.status,
+        avatarUrl: user.avatarUrl
       });
     } else {
       setEditingUser(null);
@@ -86,10 +90,22 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
         name: '',
         email: '',
         role: 'user',
-        status: 'active'
+        status: 'active',
+        avatarUrl: ''
       });
     }
     setShowModal(true);
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatarUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -254,6 +270,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, currentUser, onA
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Avatar Upload */}
+                <div className="flex justify-center mb-6">
+                  <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5">
+                      {formData.avatarUrl ? (
+                        <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                           <UserIcon size={40} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="text-white" size={24} />
+                    </div>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Full Name</label>
                   <GlassInput 

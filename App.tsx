@@ -388,14 +388,19 @@ const App: React.FC = () => {
       if (task.creatorId === currentUser?.id) {
           finalStatus = 'done'; // Auto accept
           showToast('Task Complete!');
+          logAction('TASK_UPDATE', `Completed task: ${task.title}`, task.id, task.title);
       } else {
           // If assigned to someone else, it goes to review
           finalStatus = 'review';
           showToast('Task submitted for review');
+          logAction('TASK_REVIEW', `Submitted task for review: ${task.title}`, task.id, task.title);
       }
     } else if (status === 'done') {
       // Explicit done (if called directly)
        showToast('Task Complete!');
+       logAction('TASK_UPDATE', `Marked task as done: ${task.title}`, task.id, task.title);
+    } else {
+       logAction('TASK_UPDATE', `Changed task status to ${status}: ${task.title}`, task.id, task.title);
     }
 
     setTasks(prev => prev.map(t => {
@@ -408,16 +413,23 @@ const App: React.FC = () => {
 
   // Task Review Handlers
   const handleAcceptTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return { ...t, status: 'done' };
       }
       return t;
     }));
+    if (task) {
+      logAction('TASK_REVIEW', `Approved/Finalized task: ${task.title}`, task.id, task.title);
+    }
     showToast('Task approved and finalized');
   };
 
   const handleDeclineTask = (taskId: string, newAssigneeId?: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    const newAssignee = users.find(u => u.id === newAssigneeId);
+    
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         return { 
@@ -428,7 +440,52 @@ const App: React.FC = () => {
       }
       return t;
     }));
+    
+    if (task) {
+        const reassignmentText = newAssignee && newAssignee.id !== task.assigneeId 
+            ? ` and reassigned to ${newAssignee.name}` 
+            : '';
+        logAction('TASK_REVIEW', `Declined task completion${reassignmentText}: ${task.title}`, task.id, task.title);
+    }
     showToast('Task returned to assignee');
+  };
+
+  const handleBatchAcceptTasks = (taskIds: string[]) => {
+    setTasks(prev => prev.map(t => {
+      if (taskIds.includes(t.id)) {
+        return { ...t, status: 'done' };
+      }
+      return t;
+    }));
+    
+    // Log for each task to maintain history per task
+    taskIds.forEach(id => {
+        const task = tasks.find(t => t.id === id);
+        if (task) logAction('TASK_REVIEW', `Approved task via batch action: ${task.title}`, task.id, task.title);
+    });
+
+    showToast(`${taskIds.length} tasks approved`);
+  };
+
+  const handleBatchDeclineTasks = (taskIds: string[], newAssigneeId?: string) => {
+    setTasks(prev => prev.map(t => {
+      if (taskIds.includes(t.id)) {
+        return { 
+          ...t, 
+          status: 'todo', 
+          assigneeId: newAssigneeId || t.assigneeId 
+        };
+      }
+      return t;
+    }));
+
+    // Log for each task
+    taskIds.forEach(id => {
+        const task = tasks.find(t => t.id === id);
+        if (task) logAction('TASK_REVIEW', `Declined task via batch action: ${task.title}`, task.id, task.title);
+    });
+
+    showToast(`${taskIds.length} tasks returned`);
   };
 
   const handleAddTask = (taskData: Partial<Task>) => {
@@ -452,7 +509,7 @@ const App: React.FC = () => {
 
   const handleEditTask = (updatedTask: Task) => {
     setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
-    logAction('TASK_UPDATE', `Updated task: ${updatedTask.title}`, updatedTask.id, updatedTask.title);
+    logAction('TASK_UPDATE', `Updated task details: ${updatedTask.title}`, updatedTask.id, updatedTask.title);
     showToast('Task updated successfully');
   };
 
@@ -473,7 +530,7 @@ const App: React.FC = () => {
       email: userData.email || '',
       role: userData.role || 'user',
       status: userData.status || 'active',
-      avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`
+      avatarUrl: userData.avatarUrl || `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`
     };
     setUsers([...users, newUser]);
     logAction('USER_ADD', `Added user: ${newUser.name} (${newUser.role})`, newUser.id, newUser.name);
@@ -585,8 +642,11 @@ const App: React.FC = () => {
               tasks={tasks}
               users={users}
               currentUser={currentUser}
+              historyLogs={historyLogs}
               onAccept={handleAcceptTask}
               onDecline={handleDeclineTask}
+              onBatchAccept={handleBatchAcceptTasks}
+              onBatchDecline={handleBatchDeclineTasks}
             />
           )}
           

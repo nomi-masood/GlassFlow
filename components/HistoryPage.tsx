@@ -48,6 +48,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
       case 'USER_DELETE': return 'bg-rose-500';
       case 'TASK_CREATE': return 'bg-indigo-500';
       case 'TASK_UPDATE': return 'bg-blue-500';
+      case 'TASK_REVIEW': return 'bg-orange-500';
       case 'TASK_DELETE': return 'bg-rose-500';
       case 'LEAD_CREATE': return 'bg-emerald-500';
       case 'LEAD_UPDATE': return 'bg-blue-500';
@@ -99,6 +100,7 @@ const HistoryPage: React.FC<HistoryPageProps> = ({ logs, currentUser }) => {
               <option value="LEAD_DELETE">Lead Deletions</option>
               <option value="TASK_CREATE">Task Created</option>
               <option value="TASK_UPDATE">Task Updates</option>
+              <option value="TASK_REVIEW">Task Reviews</option>
               <option value="TASK_DELETE">Task Deletions</option>
               <option value="USER_ADD">User Additions</option>
               <option value="USER_DELETE">User Deletions</option>
