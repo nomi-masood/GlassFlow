@@ -630,23 +630,23 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                     </div>
                   </div>
                   
-                  {currentUser.role !== 'user' ? (
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Assign To</label>
-                      <div className="relative">
-                        <select 
-                          className="w-full glass-input-base rounded-xl px-4 py-2 appearance-none bg-transparent text-slate-900 dark:text-white focus:outline-none font-medium"
-                          value={newTask.assigneeId}
-                          onChange={(e) => setNewTask({...newTask, assigneeId: e.target.value})}
-                        >
-                          {MOCK_USERS.map(u => (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Assign To</label>
+                    <div className="relative">
+                      <select 
+                        className="w-full glass-input-base rounded-xl px-4 py-2 appearance-none bg-transparent text-slate-900 dark:text-white focus:outline-none font-medium"
+                        value={newTask.assigneeId}
+                        onChange={(e) => setNewTask({...newTask, assigneeId: e.target.value})}
+                      >
+                        {MOCK_USERS
+                          .filter(u => currentUser.role !== 'user' || u.role === 'user')
+                          .map(u => (
                             <option key={u.id} value={u.id} className="text-black">{u.name} ({u.role})</option>
-                          ))}
-                        </select>
-                        <UserIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-                      </div>
+                        ))}
+                      </select>
+                      <UserIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                     </div>
-                  ) : <div />}
+                  </div>
                 </div>
                 
                 <div className="pt-4 flex gap-3">
