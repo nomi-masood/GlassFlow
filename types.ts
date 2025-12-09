@@ -6,7 +6,6 @@ export interface Lead {
   name: string;
   company: string;
   email: string;
-  value: number;
   stage: Stage;
   tags: string[];
   lastActive: string;

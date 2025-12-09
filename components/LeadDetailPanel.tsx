@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, Task, HistoryLog, Stage } from '../types';
 import { PIPELINE_COLUMNS } from '../constants';
@@ -87,15 +88,7 @@ const LeadDetailPanel: React.FC<LeadDetailPanelProps> = ({
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
           
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <GlassCard className="p-4 !bg-emerald-500/5 border-emerald-500/10">
-              <div className="flex items-center gap-2 mb-1 text-emerald-600 dark:text-emerald-400">
-                <DollarSign size={16} />
-                <span className="text-xs font-bold uppercase tracking-wide">Value</span>
-              </div>
-              <p className="text-xl font-medium text-slate-800 dark:text-white">${lead.value.toLocaleString()}</p>
-            </GlassCard>
-            
+          <div className="grid grid-cols-1 gap-4">
             <GlassCard className="p-4 !bg-indigo-500/5 border-indigo-500/10">
                <div className="flex items-center gap-2 mb-1 text-indigo-600 dark:text-indigo-400">
                 <Activity size={16} />

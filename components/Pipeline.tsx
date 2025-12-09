@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lead, Stage } from '../types';
 import { PIPELINE_COLUMNS } from '../constants';
@@ -44,7 +45,6 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
         <div className="flex h-full gap-4 min-w-max px-1">
           {PIPELINE_COLUMNS.map((column) => {
             const columnLeads = leads.filter(l => l.stage === column.id);
-            const totalValue = columnLeads.reduce((acc, curr) => acc + curr.value, 0);
 
             return (
               <div 
@@ -61,10 +61,6 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
                     <span className="text-xs font-medium text-slate-500 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">{columnLeads.length}</span>
                   </div>
                   <MoreHorizontal size={16} className="text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer" />
-                </div>
-
-                <div className="p-2 text-xs font-medium text-slate-500 dark:text-slate-400 text-center border-b border-slate-200 dark:border-white/5 bg-black/5 dark:bg-black/10">
-                   ${totalValue.toLocaleString()}
                 </div>
 
                 {/* Drop Zone / List */}
@@ -91,7 +87,7 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
                         <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">{lead.company}</p>
                         
                         <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-white/5">
-                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">${lead.value.toLocaleString()}</span>
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{lead.source || 'Direct'}</span>
                           {lead.avatarUrl && (
                              <img src={lead.avatarUrl} alt="avatar" className="w-5 h-5 rounded-full ring-1 ring-slate-200 dark:ring-white/20" />
                           )}

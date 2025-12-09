@@ -58,11 +58,10 @@ const App: React.FC = () => {
 
   // Add/Edit Lead Form State
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
-  const [newLead, setNewLead] = useState<{name: string, company: string, email: string, value: string, type: string, source: string, stage: Stage, notes: string}>({ 
+  const [newLead, setNewLead] = useState<{name: string, company: string, email: string, type: string, source: string, stage: Stage, notes: string}>({ 
     name: '', 
     company: '', 
     email: '',
-    value: '', 
     type: LEAD_TYPES[0],
     source: LEAD_SOURCES[0],
     stage: 'prospect',
@@ -145,7 +144,7 @@ const App: React.FC = () => {
 
   const openAddModal = () => {
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
+    setNewLead({ name: '', company: '', email: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
     setShowAddModal(true);
   };
 
@@ -155,7 +154,6 @@ const App: React.FC = () => {
       name: lead.name,
       company: lead.company,
       email: lead.email,
-      value: lead.value.toString(),
       type: lead.type || LEAD_TYPES[0],
       source: lead.source || LEAD_SOURCES[0],
       stage: lead.stage,
@@ -165,10 +163,6 @@ const App: React.FC = () => {
   };
 
   const handleSaveLead = () => {
-    // Correctly parse value to number, handle empty string
-    const parsedValue = parseFloat(newLead.value);
-    const validValue = isNaN(parsedValue) ? 0 : parsedValue;
-
     if (editingLeadId) {
       // Update existing lead
       setLeads(prev => prev.map(l => {
@@ -188,7 +182,6 @@ const App: React.FC = () => {
             name: newLead.name,
             company: newLead.company,
             email: newLead.email,
-            value: validValue,
             stage: newLead.stage,
             type: newLead.type,
             source: newLead.source,
@@ -206,7 +199,6 @@ const App: React.FC = () => {
           id: Math.random().toString(36).substr(2, 9),
           name: newLead.name || 'New Lead',
           company: newLead.company || 'Unknown',
-          value: validValue,
           email: newLead.email || 'contact@example.com',
           stage: newLead.stage,
           type: newLead.type,
@@ -224,7 +216,7 @@ const App: React.FC = () => {
 
     setShowAddModal(false);
     setEditingLeadId(null);
-    setNewLead({ name: '', company: '', email: '', value: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
+    setNewLead({ name: '', company: '', email: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
   };
   
   // Handler for Lead Detail Panel notes update
@@ -321,18 +313,16 @@ const App: React.FC = () => {
 
         // Basic Header Mapping
         const headers = cleanRows[0].map(h => h.toLowerCase().trim());
-        const hasHeaders = headers.some(h => ['name', 'company', 'email', 'value', 'amount', 'stage'].includes(h));
+        const hasHeaders = headers.some(h => ['name', 'company', 'email', 'stage'].includes(h));
 
         let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('contact'));
         let companyIdx = headers.findIndex(h => h.includes('company') || h.includes('org'));
         let emailIdx = headers.findIndex(h => h.includes('email'));
-        let valueIdx = headers.findIndex(h => h.includes('value') || h.includes('amount') || h.includes('revenue'));
 
         // Fallbacks
         if (nameIdx === -1) nameIdx = 0;
         if (companyIdx === -1) companyIdx = 1;
         if (emailIdx === -1) emailIdx = 2;
-        if (valueIdx === -1) valueIdx = 3;
 
         const newLeads: Lead[] = [];
         const startIndex = hasHeaders ? 1 : 0;
@@ -341,15 +331,11 @@ const App: React.FC = () => {
           const row = cleanRows[i];
           if (row.length < 2) continue; 
 
-          const rawValue = row[valueIdx] || '0';
-          const cleanValue = parseFloat(rawValue.replace(/[^0-9.-]+/g, ''));
-
           const lead: Lead = {
             id: Math.random().toString(36).substr(2, 9),
             name: row[nameIdx] || 'Imported Lead',
             company: row[companyIdx] || 'Unknown Company',
             email: row[emailIdx] || '',
-            value: isNaN(cleanValue) ? 0 : cleanValue,
             stage: 'prospect',
             tags: ['Imported'],
             lastActive: 'Just now',
@@ -450,7 +436,7 @@ const App: React.FC = () => {
     showToast('Task returned to assignee');
   };
 
-  const handleBatchAcceptTasks = (taskIds: string[]) => {
+  const handleBatchAccept = (taskIds: string[]) => {
     setTasks(prev => prev.map(t => {
       if (taskIds.includes(t.id)) {
         return { ...t, status: 'done' };
@@ -615,7 +601,14 @@ const App: React.FC = () => {
       <main className="relative z-10 pl-20 md:pl-64 min-h-screen transition-all">
         <div className="max-w-[1600px] mx-auto p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
           
-          {currentView === 'dashboard' && <Dashboard leads={leads} history={historyLogs} />}
+          {currentView === 'dashboard' && (
+            <Dashboard 
+              leads={leads} 
+              history={historyLogs} 
+              tasks={tasks}
+              currentUser={currentUser}
+            />
+          )}
           
           {currentView === 'pipeline' && (
             <Pipeline 
@@ -645,7 +638,7 @@ const App: React.FC = () => {
               historyLogs={historyLogs}
               onAccept={handleAcceptTask}
               onDecline={handleDeclineTask}
-              onBatchAccept={handleBatchAcceptTasks}
+              onBatchAccept={handleBatchAccept}
               onBatchDecline={handleBatchDeclineTasks}
             />
           )}
@@ -753,16 +746,6 @@ const App: React.FC = () => {
                     placeholder="e.g. jane@company.com" 
                     value={newLead.email}
                     onChange={(e) => setNewLead({...newLead, email: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Estimated Value ($)</label>
-                  <GlassInput 
-                    type="number"
-                    min="0"
-                    placeholder="5000" 
-                    value={newLead.value}
-                    onChange={(e) => setNewLead({...newLead, value: e.target.value})}
                   />
                 </div>
 

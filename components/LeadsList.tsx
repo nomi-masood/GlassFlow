@@ -282,7 +282,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Company</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Source</th>
-              <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Value</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Stage</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Active</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider last:rounded-tr-2xl">Actions</th>
@@ -335,7 +334,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                       {lead.source || lead.type || 'N/A'}
                     </span>
                   </td>
-                  <td className="p-4 text-sm font-medium text-slate-600 dark:text-slate-300">${lead.value.toLocaleString()}</td>
                   <td className="p-4">
                     <Badge color={
                       lead.stage === 'won' ? 'bg-emerald-500' : 
@@ -378,7 +376,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
             })}
             {filteredLeads.length === 0 && (
                 <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-500 dark:text-slate-400">
+                    <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
                         {searchTerm || filters.stage !== 'all' ? 'No leads found matching your criteria.' : 'No leads available.'}
                     </td>
                 </tr>
