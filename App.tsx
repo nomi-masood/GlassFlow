@@ -44,7 +44,6 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [historyLogs, setHistoryLogs] = useState<HistoryLog[]>(MOCK_HISTORY);
-  const [flowScore, setFlowScore] = useState(120);
   const [showAddModal, setShowAddModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
   
@@ -108,15 +107,11 @@ const App: React.FC = () => {
     
     setLeads(prev => prev.map(l => {
       if (l.id === leadId) {
-        // Gamification logic
         if (newStage === 'won' && l.stage !== 'won') {
-            setFlowScore(s => s + 50);
-            showToast(`Deal Won! +50 Flow Points`);
+            showToast(`Deal Won!`);
         } else if (newStage === 'lost') {
-            // Logic for lost deals
             showToast('Lead marked as lost');
         } else if (newStage !== l.stage) {
-            setFlowScore(s => s + 10);
             showToast('Pipeline updated');
         }
         
@@ -222,7 +217,6 @@ const App: React.FC = () => {
           notes: newLead.notes
       };
       setLeads([...leads, lead]);
-      setFlowScore(s => s + 20);
       logAction('LEAD_CREATE', `Created new lead: ${lead.name}`, lead.id, lead.name);
       const stageName = PIPELINE_COLUMNS.find(c => c.id === newLead.stage)?.title || 'Pipeline';
       showToast(`New lead added to ${stageName}`);
@@ -368,7 +362,6 @@ const App: React.FC = () => {
 
         if (newLeads.length > 0) {
           setLeads(prev => [...prev, ...newLeads]);
-          setFlowScore(s => s + (newLeads.length * 5));
           logAction('LEAD_CREATE', `Imported ${newLeads.length} leads via CSV`, 'bulk_import', 'Bulk Import');
           showToast(`Success! Imported ${newLeads.length} leads.`);
         } else {
@@ -394,8 +387,7 @@ const App: React.FC = () => {
       // If creator is current user (or creator is same as assignee), task is effectively done
       if (task.creatorId === currentUser?.id) {
           finalStatus = 'done'; // Auto accept
-          setFlowScore(s => s + 15);
-          showToast('Task Complete! +15 Points');
+          showToast('Task Complete!');
       } else {
           // If assigned to someone else, it goes to review
           finalStatus = 'review';
@@ -403,8 +395,7 @@ const App: React.FC = () => {
       }
     } else if (status === 'done') {
       // Explicit done (if called directly)
-       setFlowScore(s => s + 15);
-       showToast('Task Complete! +15 Points');
+       showToast('Task Complete!');
     }
 
     setTasks(prev => prev.map(t => {
@@ -423,7 +414,6 @@ const App: React.FC = () => {
       }
       return t;
     }));
-    setFlowScore(s => s + 10); // Bonus for reviewing
     showToast('Task approved and finalized');
   };
 
@@ -568,7 +558,7 @@ const App: React.FC = () => {
       <main className="relative z-10 pl-20 md:pl-64 min-h-screen transition-all">
         <div className="max-w-[1600px] mx-auto p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
           
-          {currentView === 'dashboard' && <Dashboard leads={leads} score={flowScore} history={historyLogs} />}
+          {currentView === 'dashboard' && <Dashboard leads={leads} history={historyLogs} />}
           
           {currentView === 'pipeline' && (
             <Pipeline 

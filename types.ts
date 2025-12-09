@@ -25,12 +25,6 @@ export interface PipelineColumn {
 
 export type View = 'dashboard' | 'pipeline' | 'lists' | 'tasks' | 'task-feed' | 'users' | 'history' | 'settings';
 
-export interface FlowState {
-  score: number;
-  streak: number;
-  level: number;
-}
-
 export type Role = 'admin' | 'manager' | 'user';
 
 export interface User {

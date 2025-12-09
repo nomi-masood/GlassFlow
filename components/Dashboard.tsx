@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { GlassCard } from './GlassComponents';
@@ -6,11 +7,10 @@ import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
 interface DashboardProps {
   leads: Lead[];
-  score: number;
   history: HistoryLog[];
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ leads, score, history }) => {
+const Dashboard: React.FC<DashboardProps> = ({ leads, history }) => {
   const totalValue = leads.reduce((acc, curr) => acc + curr.value, 0);
   const totalLeads = leads.length;
   const wonLeads = leads.filter(l => l.stage === 'won');
@@ -34,13 +34,6 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, score, history }) => {
         .filter(h => h.action === 'LEAD_STAGE_CHANGE' && h.details.includes('to won'))
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    // If no history, maybe just project current leads by active date?
-    // Let's fallback to grouping current leads by 'lastActive' as a proxy for activity/velocity if history is empty
-    // OR just create a cumulative value chart of the current pipeline stages for visualization.
-    
-    // Better Strategy for "Velocity": Cumulative Won Value over the last 7 days/weeks.
-    // Let's mock a timeline based on the actual Won leads and their lastActive date if history is missing.
-    
     const timeline = new Map<string, number>();
     
     // Seed last 7 days
@@ -61,9 +54,6 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, score, history }) => {
         }
     });
 
-    // If history is empty, let's just plot the distribution of value across stages to make the chart look nice for the demo
-    // User wants "Velocity", usually time-based. 
-    // Let's fake "Velocity" by plotting value of leads modified recently.
     if (wonEvents.length === 0) {
         return Array.from(timeline.keys()).map((name, i) => ({
             name,
@@ -99,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, score, history }) => {
       <div className="flex flex-col md:flex-row justify-between items-end mb-8">
         <div>
           <h1 className="text-3xl font-thin text-slate-900 dark:text-white mb-2">Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-thin">Welcome back, Alex. Your flow score is <span className="text-indigo-600 dark:text-indigo-400 font-medium">{score}</span> today.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-thin">Welcome back, Alex. Your pipeline looks healthy today.</p>
         </div>
         <div className="flex items-center gap-2 mt-4 md:mt-0">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -107,11 +97,10 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, score, history }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard label="Pipeline Value" value={`$${totalValue.toLocaleString()}`} icon={DollarSign} color="text-indigo-600 dark:text-indigo-400" trend="+12%" />
         <StatCard label="Total Leads" value={totalLeads.toString()} icon={Users} color="text-pink-600 dark:text-pink-400" trend="+5%" />
         <StatCard label="Win Rate" value={`${winRate}%`} icon={TrendingUp} color="text-emerald-600 dark:text-emerald-400" />
-        <StatCard label="Flow Score" value={score.toString()} icon={Activity} color="text-blue-600 dark:text-blue-400" trend="Level 3" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
