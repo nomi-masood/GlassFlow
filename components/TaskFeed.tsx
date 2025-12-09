@@ -42,10 +42,9 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
      task.description?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Clear selection if filtered tasks change significantly (optional, but good for consistency)
+  // Clear selection if filtered tasks change significantly
   useEffect(() => {
-    // Optionally clear selection on search change, or keep it. Keeping it allows searching to find more to select.
-    // For now, we will just ensure that selected IDs are valid if needed, but Sets are safe.
+    // Optional: Reset selection on search
   }, [searchTerm]);
 
   const getUserName = (id: string) => users.find(u => u.id === id)?.name || 'Unknown';
@@ -220,13 +219,26 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
             const pConfig = getPriorityConfig(task.priority);
             const PriorityIcon = pConfig.icon;
             
+            // Overdue Check (Task is pending review, if past due date it's overdue)
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const dueDate = new Date(task.dueDate);
+            dueDate.setHours(0,0,0,0);
+            const isOverdue = dueDate < today;
+
+            // Creator Details
+            const creator = users.find(u => u.id === task.creatorId);
+            
             // Get relevant logs and sort by newest first
             const taskLogs = historyLogs.filter(h => h.targetId === task.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
             return (
               <GlassCard 
                 key={task.id} 
-                className={`p-0 flex flex-col md:flex-row items-stretch group hover:border-indigo-500/30 transition-all overflow-hidden ${isSelected ? 'border-indigo-500/40 bg-indigo-50/10 dark:bg-indigo-900/10' : ''}`}
+                className={`p-0 flex flex-col md:flex-row items-stretch group hover:border-indigo-500/30 transition-all overflow-hidden 
+                  ${isSelected ? 'border-indigo-500/40 bg-indigo-50/10 dark:bg-indigo-900/10' : ''}
+                  ${isOverdue ? 'border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]' : ''}
+                `}
               >
                 {/* Selection Strip with Priority Border */}
                 <div 
@@ -242,17 +254,29 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
 
                 <div className="flex-1 p-5 flex flex-col md:flex-row gap-6 items-start justify-between">
                     <div className="flex-1 w-full">
-                        {/* Header Row: Badges */}
-                        <div className="flex flex-wrap items-center gap-2 mb-2">
-                           <Badge color="bg-emerald-500">Review Pending</Badge>
+                        {/* Header Row: Creator, Badges, Overdue Status */}
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                           {/* Creator Pill */}
+                           {creator && (
+                             <div className="flex items-center gap-2 pr-3 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mr-1">
+                                <img src={creator.avatarUrl} alt={creator.name} className="w-5 h-5 rounded-full" />
+                                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">Created by {creator.name}</span>
+                             </div>
+                           )}
+
                            <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium uppercase tracking-wider flex items-center gap-1 ${pConfig.badge}`}>
                               <PriorityIcon size={12} />
-                              {task.priority} Priority
+                              {task.priority}
                            </span>
                            {task.type && (
                               <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10 flex items-center gap-1">
                                 <Tag size={10} /> {task.type}
                               </span>
+                           )}
+                           {isOverdue && (
+                             <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 flex items-center gap-1 font-bold uppercase tracking-wider animate-pulse">
+                                <AlertCircle size={12} /> Overdue
+                             </span>
                            )}
                         </div>
 
@@ -262,7 +286,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                         
                         {/* Metadata Grid */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
-                            {/* Assignee */}
+                            {/* Assignee (Completed By) */}
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     <img 
@@ -285,12 +309,12 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
 
                             {/* Due Date */}
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 border border-indigo-100 dark:border-indigo-500/20">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isOverdue ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 border-rose-100 dark:border-rose-500/20' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border-indigo-100 dark:border-indigo-500/20'}`}>
                                     <Calendar size={16} />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Due Date</div>
-                                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    <div className={`text-[10px] font-medium uppercase tracking-wide ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>Due Date</div>
+                                    <div className={`text-sm font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
                                         {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </div>
                                 </div>

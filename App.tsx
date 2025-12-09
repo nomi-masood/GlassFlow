@@ -607,6 +607,7 @@ const App: React.FC = () => {
               history={historyLogs} 
               tasks={tasks}
               currentUser={currentUser}
+              onChangeView={setCurrentView}
             />
           )}
           

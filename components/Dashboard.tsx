@@ -1,18 +1,19 @@
 
 import React from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, YAxis } from 'recharts';
 import { GlassCard } from './GlassComponents';
-import { Lead, HistoryLog, Task, User } from '../types';
-import { Users, CheckSquare, Clock, AlertCircle, Activity, Sparkles, TrendingUp } from 'lucide-react';
+import { Lead, HistoryLog, Task, User, View } from '../types';
+import { Users, CheckSquare, Clock, AlertCircle, Activity, Sparkles, TrendingUp, Lightbulb, Target, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 
 interface DashboardProps {
   leads: Lead[];
   history: HistoryLog[];
   tasks: Task[];
   currentUser: User;
+  onChangeView: (view: View) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUser }) => {
+const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUser, onChangeView }) => {
   const totalLeads = leads.length;
   
   // Calculate Task Metrics
@@ -26,6 +27,91 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
     t.status !== 'review' &&
     t.dueDate < today
   ).length;
+
+  // Smart Suggestions Logic (For User Role)
+  const getSuggestions = () => {
+    const suggestions = [];
+    
+    // 1. Overdue Tasks (Critical)
+    const overdueCount = tasks.filter(t => t.assigneeId === currentUser.id && t.status !== 'done' && t.status !== 'review' && t.dueDate < today).length;
+    if (overdueCount > 0) {
+       suggestions.push({
+           id: 'overdue',
+           icon: AlertCircle,
+           color: 'text-rose-500',
+           bg: 'bg-rose-500/10',
+           title: 'Overdue Tasks',
+           desc: `You have ${overdueCount} overdue tasks requiring immediate attention.`,
+           action: 'Review Tasks',
+           view: 'tasks' as View
+       });
+    }
+
+    // 2. High Priority Tasks
+    const urgentTask = tasks.find(t => t.assigneeId === currentUser.id && t.priority === 'high' && t.status !== 'done' && t.status !== 'review' && t.dueDate >= today);
+    if (urgentTask) {
+        suggestions.push({
+            id: 'urg-task',
+            icon: Zap,
+            color: 'text-amber-500',
+            bg: 'bg-amber-500/10',
+            title: 'Urgent Attention',
+            desc: `Complete "${urgentTask.title}" today.`,
+            action: 'View Task',
+            view: 'tasks' as View
+        });
+    }
+
+    // 3. Closing Focus (Proposal)
+    const closingLeads = leads.filter(l => l.stage === 'proposal');
+    if (closingLeads.length > 0) {
+        suggestions.push({
+            id: 'close-deal',
+            icon: Target,
+            color: 'text-emerald-500',
+            bg: 'bg-emerald-500/10',
+            title: 'Closing Focus',
+            desc: `You have ${closingLeads.length} deals in Proposal stage. Push to close!`,
+            action: 'View Pipeline',
+            view: 'pipeline' as View
+        });
+    }
+
+    // 4. Stale Leads (Contacted but not moved)
+    // Simulating "Stale" based on simple string check for prototype
+    const staleLead = leads.find(l => l.stage === 'contacted' && (l.lastActive.includes('d ago') || l.lastActive.includes('w ago')));
+    if (staleLead) {
+         suggestions.push({
+            id: 're-engage',
+            icon: Clock,
+            color: 'text-blue-500',
+            bg: 'bg-blue-500/10',
+            title: 'Re-engage Lead',
+            desc: `${staleLead.name} hasn't been active recently. Send a follow-up.`,
+            action: 'Email',
+            view: 'lists' as View
+        });
+    }
+
+    // 5. Funnel Health (Empty Prospecting)
+    const prospects = leads.filter(l => l.stage === 'prospect');
+    if (prospects.length < 2) {
+         suggestions.push({
+            id: 'fill-funnel',
+            icon: Lightbulb,
+            color: 'text-indigo-500',
+            bg: 'bg-indigo-500/10',
+            title: 'Fill the Funnel',
+            desc: `Your prospect list is running low. Add new leads to keep the flow.`,
+            action: 'Add Lead',
+            view: 'lists' as View
+        });
+    }
+
+    return suggestions;
+  };
+
+  const suggestions = getSuggestions();
 
   // Lead Sources Data
   const sourceData = React.useMemo(() => {
@@ -46,8 +132,8 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
 
   const SOURCE_COLORS = ['#818cf8', '#c084fc', '#f472b6', '#22d3ee', '#34d399'];
 
-  const StatCard: React.FC<{ label: string; value: string | number; icon: React.ElementType; color: string; subtext?: string }> = ({ label, value, icon: Icon, color, subtext }) => (
-    <GlassCard className="relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+  const StatCard: React.FC<{ label: string; value: string | number; icon: React.ElementType; color: string; subtext?: string; onClick?: () => void }> = ({ label, value, icon: Icon, color, subtext, onClick }) => (
+    <GlassCard onClick={onClick} className={`relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 ${onClick ? 'cursor-pointer' : ''}`}>
       <div className={`absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
         <Icon size={80} />
       </div>
@@ -63,6 +149,8 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
       </div>
     </GlassCard>
   );
+
+  const canViewActivity = currentUser.role === 'admin' || currentUser.role === 'manager';
 
   return (
     <div className="space-y-6 animate-fade-in-up pb-8">
@@ -87,6 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
             icon={Users} 
             color="text-indigo-500" 
             subtext="Active in pipeline"
+            onClick={() => onChangeView('lists')}
         />
         <StatCard 
             label="Pending Reviews" 
@@ -94,6 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
             icon={CheckSquare} 
             color="text-orange-500" 
             subtext="Tasks awaiting approval"
+            onClick={() => onChangeView('task-feed')}
         />
         <StatCard 
             label="My Active Tasks" 
@@ -101,6 +191,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
             icon={Clock} 
             color="text-blue-500" 
             subtext="To Do & In Progress"
+            onClick={() => onChangeView('tasks')}
         />
         <StatCard 
             label="Overdue" 
@@ -108,39 +199,76 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
             icon={AlertCircle} 
             color="text-rose-500" 
             subtext="Requires attention"
+            onClick={() => onChangeView('tasks')}
         />
       </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Recent Activity Stream */}
-        <GlassCard className="h-96 flex flex-col">
-            <h3 className="text-lg font-thin text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                <Activity size={18} className="text-indigo-500" /> Recent Activity
-            </h3>
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
-                {history.slice(0, 8).map((log, i) => (
-                    <div key={log.id} className="flex gap-3 items-start relative">
-                        {i !== history.slice(0, 8).length - 1 && <div className="absolute left-[11px] top-6 bottom-[-10px] w-px bg-slate-200 dark:bg-white/10" />}
-                        <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center shrink-0 border border-slate-200 dark:border-white/5 text-xs font-bold text-slate-600 dark:text-slate-300">
-                             {log.userName.charAt(0)}
-                        </div>
-                        <div>
-                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-tight mb-1">
-                                <span className="font-semibold">{log.userName}</span> {log.details.toLowerCase()}
-                            </p>
-                            <p className="text-[10px] text-slate-400 font-medium">
-                                {new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                            </p>
-                        </div>
-                    </div>
-                ))}
-                {history.length === 0 && (
-                    <div className="text-center text-slate-400 text-xs py-10">No recent activity</div>
-                )}
-            </div>
-        </GlassCard>
+        {/* Column 1: Activity OR Suggestions */}
+        {canViewActivity ? (
+          <GlassCard className="h-96 flex flex-col">
+              <h3 className="text-lg font-thin text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Activity size={18} className="text-indigo-500" /> Recent Activity
+              </h3>
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+                  {history.slice(0, 8).map((log, i) => (
+                      <div key={log.id} className="flex gap-3 items-start relative">
+                          {i !== history.slice(0, 8).length - 1 && <div className="absolute left-[11px] top-6 bottom-[-10px] w-px bg-slate-200 dark:bg-white/10" />}
+                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center shrink-0 border border-slate-200 dark:border-white/5 text-xs font-bold text-slate-600 dark:text-slate-300">
+                               {log.userName.charAt(0)}
+                          </div>
+                          <div>
+                              <p className="text-xs text-slate-700 dark:text-slate-300 leading-tight mb-1">
+                                  <span className="font-semibold">{log.userName}</span> {log.details.toLowerCase()}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium">
+                                  {new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </p>
+                          </div>
+                      </div>
+                  ))}
+                  {history.length === 0 && (
+                      <div className="text-center text-slate-400 text-xs py-10">No recent activity</div>
+                  )}
+              </div>
+          </GlassCard>
+        ) : (
+          <GlassCard className="h-96 flex flex-col">
+              <h3 className="text-lg font-thin text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                  <Sparkles size={18} className="text-amber-500" /> Smart Suggestions
+              </h3>
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                  {suggestions.length > 0 ? suggestions.map((sugg) => (
+                      <div 
+                        key={sugg.id} 
+                        onClick={() => onChangeView(sugg.view)}
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 hover:border-indigo-500/30 transition-colors group cursor-pointer"
+                      >
+                          <div className="flex items-start gap-3">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${sugg.bg} ${sugg.color}`}>
+                                  <sugg.icon size={16} />
+                              </div>
+                              <div className="flex-1">
+                                  <h4 className="text-sm font-medium text-slate-800 dark:text-white mb-0.5">{sugg.title}</h4>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mb-2">{sugg.desc}</p>
+                                  <div className="flex items-center text-[10px] font-bold text-indigo-500 uppercase tracking-wide opacity-80 group-hover:opacity-100 transition-opacity">
+                                      {sugg.action} <ArrowRight size={10} className="ml-1" />
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  )) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                          <CheckCircle2 size={32} className="text-emerald-500 mb-2 opacity-50" />
+                          <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">All caught up!</p>
+                          <p className="text-xs text-slate-400">No immediate actions required.</p>
+                      </div>
+                  )}
+              </div>
+          </GlassCard>
+        )}
 
         {/* Lead Sources Chart (Donut) */}
         <GlassCard className="h-96 flex flex-col relative overflow-hidden">
