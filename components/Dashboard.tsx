@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, YAxis } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { GlassCard } from './GlassComponents';
 import { Lead, HistoryLog, Task, User, View } from '../types';
-import { Users, CheckSquare, Clock, AlertCircle, Activity, Sparkles, TrendingUp, Lightbulb, Target, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
+import { Users, CheckSquare, Clock, AlertCircle, Activity, Sparkles, TrendingUp, Lightbulb, Target, ArrowRight, Zap, CheckCircle2, Link, Share2, Megaphone, Calendar, Handshake, Globe } from 'lucide-react';
 
 interface DashboardProps {
   leads: Lead[];
@@ -131,6 +131,18 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
   }, [leads, totalLeads]);
 
   const SOURCE_COLORS = ['#818cf8', '#c084fc', '#f472b6', '#22d3ee', '#34d399'];
+
+  const getSourceIcon = (source: string) => {
+    switch (source.toLowerCase()) {
+      case 'direct': return Link;
+      case 'social': return Share2;
+      case 'referral': return Users;
+      case 'ads': return Megaphone;
+      case 'event': return Calendar;
+      case 'partner': return Handshake;
+      default: return Globe;
+    }
+  };
 
   const StatCard: React.FC<{ label: string; value: string | number; icon: React.ElementType; color: string; subtext?: string; onClick?: () => void }> = ({ label, value, icon: Icon, color, subtext, onClick }) => (
     <GlassCard onClick={onClick} className={`relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300 ${onClick ? 'cursor-pointer' : ''}`}>
@@ -271,66 +283,109 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
         )}
 
         {/* Lead Sources Chart (Donut) */}
-        <GlassCard className="h-96 flex flex-col relative overflow-hidden">
-          <h3 className="text-lg font-thin text-slate-800 dark:text-white mb-2 z-10">Lead Sources</h3>
+        <GlassCard className="h-96 flex flex-col relative">
+          <div className="flex justify-between items-center mb-2 z-10">
+              <h3 className="text-lg font-thin text-slate-800 dark:text-white">Lead Acquisition</h3>
+              <div className="px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-500/10 text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
+                  Real-time
+              </div>
+          </div>
           
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Chart Area */}
-            <div className="h-48 w-full relative -ml-2">
+            <div className="h-44 w-full relative shrink-0">
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                        {totalLeads === 0 && (
+                            <Pie
+                                data={[{ value: 1 }]}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius="70%"
+                                outerRadius="90%"
+                                fill="transparent"
+                                stroke="rgba(128,128,128,0.2)"
+                                strokeWidth={1}
+                                isAnimationActive={false}
+                                dataKey="value"
+                            />
+                        )}
                         <Pie
                             data={sourceData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={50}
-                            outerRadius={70}
-                            paddingAngle={5}
+                            innerRadius="70%"
+                            outerRadius="90%"
+                            paddingAngle={4}
                             dataKey="value"
                             stroke="none"
+                            cornerRadius={4}
                         >
                             {sourceData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={SOURCE_COLORS[index % SOURCE_COLORS.length]} />
                             ))}
                         </Pie>
                         <Tooltip 
+                            allowEscapeViewBox={{ x: true, y: true }}
                             contentStyle={{ 
-                                backgroundColor: 'rgba(20, 20, 40, 0.9)', 
+                                backgroundColor: 'rgba(20, 20, 40, 0.95)', 
                                 backdropFilter: 'blur(10px)',
                                 borderRadius: '12px',
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 color: '#fff',
-                                fontSize: '12px'
+                                fontSize: '12px',
+                                padding: '8px 12px',
+                                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5)',
+                                zIndex: 100
                             }}
                             itemStyle={{ color: '#fff' }}
-                            formatter={(value: number) => [`${value} Leads`, '']}
+                            formatter={(value: number) => [`${value} Leads`, 'Count']}
+                            cursor={false}
                         />
                     </PieChart>
                 </ResponsiveContainer>
                 {/* Center Label */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-slate-800 dark:text-white">{totalLeads}</span>
-                    <span className="text-[10px] text-slate-400 uppercase tracking-widest">Total</span>
+                    <span className="text-3xl font-bold text-slate-800 dark:text-white tracking-tight">{totalLeads}</span>
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Total</span>
                 </div>
             </div>
 
             {/* Detailed List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-2 space-y-2">
-                {sourceData.map((source, index) => (
-                    <div key={source.name} className="flex items-center justify-between p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-2">
-                            <div 
-                                className="w-2.5 h-2.5 rounded-full" 
-                                style={{ backgroundColor: SOURCE_COLORS[index % SOURCE_COLORS.length] }} 
-                            />
-                            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{source.name}</span>
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-1 space-y-3 mt-1 pb-2">
+                {sourceData.map((source, index) => {
+                    const Icon = getSourceIcon(source.name);
+                    const color = SOURCE_COLORS[index % SOURCE_COLORS.length];
+                    return (
+                        <div key={source.name} className="flex items-center justify-between group p-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                            <div className="flex items-center gap-3">
+                                <div 
+                                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
+                                    style={{ backgroundColor: `${color}15`, color: color }}
+                                >
+                                    <Icon size={14} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{source.name}</span>
+                                    <div className="flex items-center gap-1">
+                                         <div className="w-12 h-1 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                                             <div className="h-full rounded-full" style={{ width: `${source.percent}%`, backgroundColor: color }} />
+                                         </div>
+                                         <span className="text-[9px] text-slate-400">{source.percent}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-sm font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-white/5 px-2 py-1 rounded-lg">
+                                {source.value}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-slate-800 dark:text-white">{source.value}</span>
-                            <span className="text-[10px] text-slate-400 w-8 text-right">{source.percent}%</span>
-                        </div>
+                    );
+                })}
+                {sourceData.length === 0 && (
+                    <div className="text-center text-xs text-slate-400 py-4 italic">
+                        No lead data available.
                     </div>
-                ))}
+                )}
             </div>
           </div>
         </GlassCard>
