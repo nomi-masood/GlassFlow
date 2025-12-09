@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType } from './types';
+import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType, LeadActivity } from './types';
 import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY, LEAD_SOURCES, LEAD_TYPES } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -11,6 +10,7 @@ import TaskFeed from './components/TaskFeed';
 import UserManagement from './components/UserManagement';
 import HistoryPage from './components/HistoryPage';
 import LeadDetailPanel from './components/LeadDetailPanel';
+import SettingsPage from './components/SettingsPage';
 import Login from './components/Login';
 import { GlassCard, GlassButton, GlassInput } from './components/GlassComponents';
 import { Plus, X, Sparkles, AlertCircle, ChevronDown, LayoutTemplate, Globe, Menu, Zap } from 'lucide-react';
@@ -222,7 +222,24 @@ const App: React.FC = () => {
     setNewLead({ name: '', company: '', email: '', type: LEAD_TYPES[0], source: LEAD_SOURCES[0], stage: 'prospect', notes: '' });
   };
   
-  // Handler for Lead Detail Panel notes update
+  // Handler for adding a new activity to a lead
+  const handleAddLeadActivity = (leadId: string, activity: LeadActivity) => {
+    const lead = leads.find(l => l.id === leadId);
+    setLeads(prev => prev.map(l => {
+        if (l.id === leadId) {
+            return {
+                ...l,
+                activities: [activity, ...(l.activities || [])],
+                lastActive: 'Just now'
+            };
+        }
+        return l;
+    }));
+    logAction('LEAD_ACTIVITY_LOG', `Logged ${activity.type}: ${activity.summary}`, leadId, lead?.name);
+    showToast('Activity logged');
+  };
+
+  // Handler for Lead Detail Panel notes update (legacy/compatibility)
   const handleUpdateLeadNotes = (leadId: string, notes: string) => {
     const lead = leads.find(l => l.id === leadId);
     setLeads(prev => prev.map(l => {
@@ -531,6 +548,14 @@ const App: React.FC = () => {
     showToast('User profile updated');
   };
 
+  const handleUpdateProfile = (updatedData: Partial<User>) => {
+    if (!currentUser) return;
+    const updatedUser = { ...currentUser, ...updatedData };
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+    showToast('Profile updated successfully');
+  };
+
   const handleDeleteUser = (userId: string) => {
     // Permission checks
     if (!currentUser) return;
@@ -702,13 +727,14 @@ const App: React.FC = () => {
             />
           )}
           
-          {(currentView === 'settings') && (
-            <div className="flex flex-col items-center justify-center h-[60vh] text-center space-y-6">
-                <GlassCard className="p-12 border-dashed border-slate-300 dark:border-white/20 bg-transparent">
-                    <h2 className="text-2xl font-thin mb-2">Coming Soon</h2>
-                    <p className="text-slate-500 dark:text-slate-400">The {currentView} module is under construction.</p>
-                </GlassCard>
-            </div>
+          {currentView === 'settings' && (
+            <SettingsPage 
+              currentUser={currentUser}
+              onUpdateProfile={handleUpdateProfile}
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+              onLogout={handleLogout}
+            />
           )}
         </div>
       </main>
@@ -731,6 +757,7 @@ const App: React.FC = () => {
          linkedTasks={leadTasks}
          history={leadHistory}
          onUpdateNotes={handleUpdateLeadNotes}
+         onAddActivity={handleAddLeadActivity}
          onEditLead={(lead) => {
             setSelectedLeadId(null);
             handleEditLead(lead);

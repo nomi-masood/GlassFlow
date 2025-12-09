@@ -46,3 +46,18 @@ export const Badge: React.FC<{ children: React.ReactNode; color?: string }> = ({
     {children}
   </span>
 );
+
+export const GlassToggle: React.FC<{ checked: boolean; onChange: (checked: boolean) => void; label?: string; description?: string }> = ({ checked, onChange, label, description }) => (
+  <div className="flex items-center justify-between py-3">
+    <div>
+      {label && <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{label}</div>}
+      {description && <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</div>}
+    </div>
+    <button
+      onClick={() => onChange(!checked)}
+      className={`w-11 h-6 rounded-full transition-colors relative shrink-0 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 ${checked ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-white/10'}`}
+    >
+      <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+    </button>
+  </div>
+);

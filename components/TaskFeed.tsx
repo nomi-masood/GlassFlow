@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Task, User, HistoryLog } from '../types';
 import { GlassCard, GlassButton, Badge } from './GlassComponents';
-import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown } from 'lucide-react';
+import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown, Plus, GitCommit, FileEdit } from 'lucide-react';
 
 interface TaskFeedProps {
   tasks: Task[];
@@ -89,6 +89,33 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
           icon: Clock
         };
     }
+  };
+
+  const getLogConfig = (log: HistoryLog) => {
+    const details = log.details.toLowerCase();
+    
+    if (log.action === 'TASK_CREATE') {
+      return { icon: Plus, color: 'text-indigo-500', bg: 'bg-indigo-500' };
+    }
+    
+    if (log.action === 'TASK_REVIEW') {
+      if (details.includes('declined') || details.includes('returned')) {
+        return { icon: RotateCcw, color: 'text-orange-500', bg: 'bg-orange-500' };
+      }
+      if (details.includes('approved') || details.includes('finalized')) {
+        return { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500' };
+      }
+      return { icon: GitCommit, color: 'text-blue-500', bg: 'bg-blue-500' }; // Submitted/Generic review action
+    }
+    
+    if (log.action === 'TASK_UPDATE') {
+      if (details.includes('done') || details.includes('complet')) {
+         return { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500' };
+      }
+      return { icon: FileEdit, color: 'text-slate-500', bg: 'bg-slate-500' };
+    }
+    
+    return { icon: Activity, color: 'text-slate-400', bg: 'bg-slate-400' };
   };
 
   // Selection Handlers
@@ -180,30 +207,30 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
 
       {/* Batch Actions Toolbar */}
       {reviewTasks.length > 0 && (
-        <div className="flex items-center justify-between mb-2 p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 transition-all">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-2 p-3 gap-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 transition-all">
             <button 
                 onClick={toggleSelectAll}
-                className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors group"
+                className="flex items-center gap-3 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors group w-full sm:w-auto"
             >
                 {selectedIds.size === reviewTasks.length ? (
-                    <CheckSquare size={20} className="text-indigo-500" />
+                    <CheckSquare size={20} className="text-indigo-500 shrink-0" />
                 ) : (
-                    <Square size={20} className="text-slate-400 group-hover:text-indigo-500" />
+                    <Square size={20} className="text-slate-400 group-hover:text-indigo-500 shrink-0" />
                 )}
                 <span>Select All ({reviewTasks.length})</span>
             </button>
 
-            <div className={`flex items-center gap-3 transition-opacity duration-300 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`flex items-center gap-2 sm:gap-3 w-full sm:w-auto transition-opacity duration-300 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-2 hidden sm:inline">{selectedIds.size} selected</span>
                 <button 
                     onClick={openBatchDeclineModal} 
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                 >
                     <XCircle size={14} /> Decline
                 </button>
                 <button 
                     onClick={handleBatchAccept} 
-                    className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors"
                 >
                     <CheckCircle2 size={14} /> Accept
                 </button>
@@ -231,6 +258,10 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
             
             // Get relevant logs and sort by newest first
             const taskLogs = historyLogs.filter(h => h.targetId === task.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            const latestLog = taskLogs[0];
+            const latestLogConfig = latestLog ? getLogConfig(latestLog) : { icon: Activity, color: 'text-slate-400', bg: 'bg-slate-400' };
+            const LatestIcon = latestLogConfig.icon;
 
             return (
               <GlassCard 
@@ -242,7 +273,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
               >
                 {/* Selection Strip with Priority Border */}
                 <div 
-                    className={`w-12 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-white/5 cursor-pointer bg-slate-50/50 dark:bg-white/[0.02] hover:bg-indigo-50/50 dark:hover:bg-white/[0.05] transition-colors shrink-0 border-l-4 ${pConfig.border}`}
+                    className={`w-full md:w-12 h-12 md:h-auto flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-white/5 cursor-pointer bg-slate-50/50 dark:bg-white/[0.02] hover:bg-indigo-50/50 dark:hover:bg-white/[0.05] transition-colors shrink-0 border-l-4 ${pConfig.border}`}
                     onClick={() => toggleSelect(task.id)}
                 >
                     {isSelected ? (
@@ -252,7 +283,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                     )}
                 </div>
 
-                <div className="flex-1 p-5 flex flex-col md:flex-row gap-6 items-start justify-between">
+                <div className="flex-1 p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-between">
                     <div className="flex-1 w-full">
                         {/* Header Row: Creator, Badges, Overdue Status */}
                         <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -281,14 +312,14 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                         </div>
 
                         {/* Title & Description */}
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5">{task.title}</h3>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5 break-words">{task.title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 line-clamp-1">{task.description || 'No description provided.'}</p>
                         
                         {/* Metadata Grid */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
                             {/* Assignee (Completed By) */}
                             <div className="flex items-center gap-3">
-                                <div className="relative">
+                                <div className="relative shrink-0">
                                     <img 
                                         src={getUserAvatar(task.assigneeId)} 
                                         alt={getUserName(task.assigneeId)}
@@ -309,7 +340,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
 
                             {/* Due Date */}
                             <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isOverdue ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 border-rose-100 dark:border-rose-500/20' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border-indigo-100 dark:border-indigo-500/20'}`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${isOverdue ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 border-rose-100 dark:border-rose-500/20' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border-indigo-100 dark:border-indigo-500/20'}`}>
                                     <Calendar size={16} />
                                 </div>
                                 <div>
@@ -329,41 +360,47 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                                     onClick={() => toggleHistory(task.id)}
                                     className="w-full flex items-center justify-between group/history text-left"
                                 >
-                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                        <div className={`p-1 rounded-full ${isHistoryOpen ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400' : 'bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-slate-400'}`}>
-                                            <Activity size={12} />
+                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 overflow-hidden">
+                                        <div className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center transition-colors ${isHistoryOpen ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-slate-100 dark:bg-white/5'}`}>
+                                            <LatestIcon size={12} className={latestLogConfig.color} />
                                         </div>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 overflow-hidden">
                                             <span className="font-medium text-slate-700 dark:text-slate-300">{taskLogs[0].userName}</span>
-                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                                             <span className="truncate max-w-[150px] sm:max-w-[250px]">
                                                 {taskLogs[0].details.replace(task.title, '').replace(':', '').trim() || 'Updated task'}
                                             </span>
-                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                                            <span className="opacity-70">{formatTimeAgo(taskLogs[0].timestamp)}</span>
+                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                                            <span className="opacity-70 shrink-0">{formatTimeAgo(taskLogs[0].timestamp)}</span>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-1 text-[10px] font-medium text-indigo-500 opacity-60 group-hover/history:opacity-100 transition-opacity">
+                                    <div className="flex items-center gap-1 text-[10px] font-medium text-indigo-500 opacity-60 group-hover/history:opacity-100 transition-opacity shrink-0 ml-2">
                                         {isHistoryOpen ? 'Collapse' : (taskLogs.length > 1 ? `${taskLogs.length - 1} more updates` : 'Details')}
                                         {isHistoryOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                     </div>
                                 </button>
 
                                 {isHistoryOpen && (
-                                    <div className="mt-4 pl-2 space-y-4 relative border-l border-slate-200 dark:border-white/10 ml-2.5 animate-fade-in-up">
-                                        {taskLogs.map((log, i) => (
-                                            <div key={log.id} className="relative pl-4">
-                                                <div className={`absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-[#1E1E2E] ${i === 0 ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                                                <div className="text-xs">
-                                                    <span className="font-semibold text-slate-800 dark:text-white">{log.userName}</span>
-                                                    <span className="text-slate-500 dark:text-slate-400 ml-1">{log.details.replace(task.title, '').replace(':', '').trim()}</span>
+                                    <div className="mt-4 pl-3 space-y-4 relative border-l border-slate-200 dark:border-white/10 ml-3 animate-fade-in-up">
+                                        {taskLogs.map((log, i) => {
+                                            const config = getLogConfig(log);
+                                            const LogIcon = config.icon;
+                                            return (
+                                                <div key={log.id} className="relative pl-6">
+                                                    <div className={`absolute -left-[10px] top-0 w-5 h-5 rounded-full border-2 border-white dark:border-[#1E1E2E] flex items-center justify-center z-10 ${config.bg} text-white shadow-sm`}>
+                                                        <LogIcon size={10} />
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        <span className="font-semibold text-slate-800 dark:text-white">{log.userName}</span>
+                                                        <span className="text-slate-500 dark:text-slate-400 ml-1 block sm:inline">{log.details.replace(task.title, '').replace(':', '').trim()}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 mt-0.5">
+                                                        {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 mt-0.5">
-                                                    {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -380,13 +417,13 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                         <GlassButton 
                         variant="ghost" 
                         onClick={() => openDeclineModal(task)}
-                        className="flex-1 md:flex-none text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200"
+                        className="flex-1 md:flex-none text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 justify-center"
                         >
                         <XCircle size={18} /> <span className="md:hidden">Decline</span>
                         </GlassButton>
                         <GlassButton 
                         onClick={() => onAccept(task.id)}
-                        className="flex-1 md:flex-none bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white border-transparent shadow-lg shadow-emerald-500/20"
+                        className="flex-1 md:flex-none bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white border-transparent shadow-lg shadow-emerald-500/20 justify-center"
                         >
                         <CheckCircle2 size={18} /> Accept
                         </GlassButton>

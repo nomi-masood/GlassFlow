@@ -1,6 +1,18 @@
 
 export type Stage = 'prospect' | 'contacted' | 'qualified' | 'proposal' | 'won' | 'lost';
 
+export type LeadActivityType = 'note' | 'call' | 'email' | 'meeting';
+
+export interface LeadActivity {
+  id: string;
+  type: LeadActivityType;
+  summary: string;
+  details?: string;
+  outcome?: string;
+  date: string; // ISO string
+  duration?: string; // e.g. "15m", "1h"
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -14,6 +26,7 @@ export interface Lead {
   type?: string;
   source?: string;
   notes?: string;
+  activities?: LeadActivity[];
 }
 
 export interface PipelineColumn {
@@ -61,7 +74,7 @@ export interface Task {
   attachments?: Attachment[];
 }
 
-export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'TASK_REVIEW' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE';
+export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'TASK_REVIEW' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE' | 'LEAD_ACTIVITY_LOG';
 
 export interface HistoryLog {
   id: string;

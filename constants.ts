@@ -63,7 +63,24 @@ export const MOCK_LEADS: Lead[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&h=100',
     source: 'Direct',
     type: 'Inbound',
-    notes: 'Key decision maker. Interested in the enterprise plan.'
+    notes: 'Key decision maker. Interested in the enterprise plan.',
+    activities: [
+      {
+        id: 'a1',
+        type: 'call',
+        summary: 'Introductory Call',
+        outcome: 'Connected',
+        date: new Date(Date.now() - 86400000 * 2).toISOString(),
+        details: 'Discussed general requirements. They are looking for a Q4 deployment.'
+      },
+      {
+        id: 'a2',
+        type: 'email',
+        summary: 'Sent Brochure',
+        date: new Date(Date.now() - 86400000 * 1).toISOString(),
+        details: 'Sent the enterprise pdfs.'
+      }
+    ]
   },
   {
     id: '2',
@@ -75,7 +92,8 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '1d ago',
     avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&h=100',
     source: 'Referral',
-    type: 'Referral'
+    type: 'Referral',
+    activities: []
   },
   {
     id: '3',
@@ -87,7 +105,18 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '4h ago',
     avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100',
     source: 'Social',
-    type: 'Inbound'
+    type: 'Inbound',
+    activities: [
+      {
+        id: 'a3',
+        type: 'meeting',
+        summary: 'Product Demo',
+        outcome: 'Completed',
+        duration: '45m',
+        date: new Date(Date.now() - 3600000 * 4).toISOString(),
+        details: 'Demo went well. Sarah loved the analytics feature.'
+      }
+    ]
   },
   {
     id: '4',
