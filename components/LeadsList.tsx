@@ -79,11 +79,13 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
   };
 
   const toggleSelectOne = (id: string) => {
-    if (!isSelectionMode) return;
+    // Auto enable selection mode if not active but selecting via checkbox
+    if (!isSelectionMode) setIsSelectionMode(true);
     
     const newSet = new Set(selectedIds);
     if (newSet.has(id)) {
       newSet.delete(id);
+      if (newSet.size === 0) setIsSelectionMode(false);
     } else {
       newSet.add(id);
     }
@@ -131,18 +133,18 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
            <h1 className="text-3xl font-thin text-slate-900 dark:text-white mb-1">All Leads</h1>
            <p className="text-slate-500 dark:text-slate-400 text-sm font-thin">Manage your contacts and companies</p>
         </div>
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           {selectedIds.size > 0 ? (
              <button 
                onClick={initiateBulkDelete}
-               className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
+               className="flex-1 md:flex-none justify-center px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
              >
                <Trash2 size={16} />
                <span>Delete ({selectedIds.size})</span>
              </button>
           ) : (
             <>
-              <div className="relative flex-1 md:w-64">
+              <div className="relative flex-1 min-w-[200px] md:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
                 <input 
                   type="text" 
@@ -187,7 +189,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
           
           <button 
             onClick={onAdd}
-            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
+            className="md:flex hidden px-4 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl text-sm font-medium items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
           >
             <Plus size={16} /> <span className="hidden sm:inline">Add Lead</span>
           </button>
@@ -261,7 +263,8 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
         </div>
       )}
 
-      <div className="glass-panel rounded-2xl overflow-visible border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.03]">
+      {/* Desktop Table View */}
+      <div className="hidden md:block glass-panel rounded-2xl overflow-visible border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/[0.03]">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02]">
@@ -303,19 +306,17 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                   }}
                 >
                   <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    {isSelectionMode && (
-                        <button 
-                          onClick={() => toggleSelectOne(lead.id)}
-                          className="text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center animate-scale-in"
-                          aria-label={`Select ${lead.name}`}
-                        >
-                          {isSelected ? (
-                            <CheckSquare size={18} className="text-indigo-500" />
-                          ) : (
-                            <Square size={18} />
-                          )}
-                        </button>
-                    )}
+                    {/* Always show checkbox to allow individual selection without full mode logic complications on row click */}
+                     <button 
+                       onClick={() => toggleSelectOne(lead.id)}
+                       className="text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center animate-scale-in"
+                     >
+                       {isSelected ? (
+                         <CheckSquare size={18} className="text-indigo-500" />
+                       ) : (
+                         <Square size={18} />
+                       )}
+                     </button>
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
@@ -353,7 +354,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                          }}
                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-lg transition-all"
                          title="Edit Lead"
-                         aria-label={`Edit ${lead.name}`}
                        >
                          <Edit size={18} />
                        </button>
@@ -365,7 +365,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                          }}
                          className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all z-10"
                          title="Delete Lead"
-                         aria-label={`Delete ${lead.name}`}
                        >
                          <Trash2 size={18} />
                        </button>
@@ -374,16 +373,101 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                 </tr>
               );
             })}
-            {filteredLeads.length === 0 && (
-                <tr>
-                    <td colSpan={7} className="p-8 text-center text-slate-500 dark:text-slate-400">
-                        {searchTerm || filters.stage !== 'all' ? 'No leads found matching your criteria.' : 'No leads available.'}
-                    </td>
-                </tr>
-            )}
           </tbody>
         </table>
       </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3 pb-20">
+        <div className="flex items-center justify-between px-1">
+             <button 
+                onClick={toggleSelectAll}
+                className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2"
+              >
+                 {isSelectionMode && selectedIds.size === filteredLeads.length && filteredLeads.length > 0 ? (
+                    <CheckSquare size={18} className="text-indigo-500" />
+                 ) : (
+                    <Square size={18} />
+                 )}
+                 Select All
+              </button>
+              <span className="text-xs text-slate-400">{filteredLeads.length} leads</span>
+        </div>
+
+        {filteredLeads.map((lead) => {
+           const isSelected = selectedIds.has(lead.id);
+           return (
+             <GlassCard 
+                key={lead.id} 
+                onClick={() => {
+                    if(isSelectionMode) toggleSelectOne(lead.id);
+                    else onLeadClick(lead);
+                }}
+                className={`p-4 relative border transition-all ${isSelected ? 'border-indigo-500/50 bg-indigo-50/10' : 'border-white/10'}`}
+             >
+                <div className="flex justify-between items-start mb-3">
+                   <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-medium text-white shadow-inner">
+                        {lead.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-white">{lead.name}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{lead.company}</p>
+                      </div>
+                   </div>
+                   <div onClick={(e) => e.stopPropagation()}>
+                       <button 
+                         onClick={() => toggleSelectOne(lead.id)}
+                         className="p-2 -mr-2 text-slate-400"
+                       >
+                         {isSelected ? <CheckSquare size={20} className="text-indigo-500" /> : <Square size={20} />}
+                       </button>
+                   </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
+                        <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Stage</span>
+                        <Badge color={
+                          lead.stage === 'won' ? 'bg-emerald-500' : 
+                          lead.stage === 'lost' ? 'bg-rose-500' : 'bg-indigo-500'
+                        }>
+                          {lead.stage}
+                        </Badge>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
+                        <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Source</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{lead.source}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
+                    <span className="text-xs text-slate-400">Active: {lead.lastActive}</span>
+                    <div className="flex gap-2">
+                         <button 
+                             onClick={(e) => { e.stopPropagation(); onEdit(lead); }}
+                             className="p-2 bg-slate-100 dark:bg-white/10 rounded-lg text-slate-500 dark:text-slate-300"
+                         >
+                             <Edit size={16} />
+                         </button>
+                         <button 
+                             onClick={(e) => { e.stopPropagation(); initiateSingleDelete(lead.id, lead.name); }}
+                             className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-500"
+                         >
+                             <Trash2 size={16} />
+                         </button>
+                    </div>
+                </div>
+             </GlassCard>
+           );
+        })}
+      </div>
+
+      {filteredLeads.length === 0 && (
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400">
+             {searchTerm || filters.stage !== 'all' ? 'No leads found matching your criteria.' : 'No leads available.'}
+          </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteModal.show && (

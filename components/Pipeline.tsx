@@ -41,15 +41,15 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
         </div>
       </div>
       
-      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4">
-        <div className="flex h-full gap-4 min-w-max px-1">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 snap-x snap-mandatory">
+        <div className="flex h-full gap-4 px-1 min-w-max">
           {PIPELINE_COLUMNS.map((column) => {
             const columnLeads = leads.filter(l => l.stage === column.id);
 
             return (
               <div 
                 key={column.id}
-                className="w-80 flex flex-col h-full rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 transition-colors hover:bg-white/60 dark:hover:bg-white/[0.07]"
+                className="w-[85vw] md:w-80 flex flex-col h-full rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 transition-colors hover:bg-white/60 dark:hover:bg-white/[0.07] snap-center shrink-0"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, column.id)}
               >

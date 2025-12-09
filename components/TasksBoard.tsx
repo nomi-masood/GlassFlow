@@ -226,7 +226,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
           </p>
         </div>
         
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {/* Sorting Control */}
           <div className="flex items-center bg-white/50 dark:bg-black/20 p-1 rounded-xl border border-slate-200 dark:border-white/10">
              <div className="relative px-2 border-r border-slate-200 dark:border-white/10">
@@ -272,15 +272,15 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                 setClientSearch('');
                 setShowAddModal(true);
             }}
-            className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl text-sm font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
+            className="flex-1 md:flex-none px-4 py-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 transition-all"
           >
             <Plus size={16} /> <span className="hidden sm:inline">Add Task</span>
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-2">
-        <div className="flex h-full gap-6 min-w-max px-1">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden pb-2 snap-x snap-mandatory">
+        <div className="flex h-full gap-6 px-1 min-w-max">
           {columns.map(col => {
             const colTasks = sortedTasks.filter(t => t.status === col.id);
             const Icon = col.icon;
@@ -288,7 +288,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
             return (
               <div 
                 key={col.id} 
-                className="w-80 md:w-96 flex flex-col h-full"
+                className="w-[85vw] md:w-96 flex flex-col h-full snap-center shrink-0"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, col.id)}
               >
@@ -438,15 +438,15 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
 
       {/* Add/Edit Task Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4">
           <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-md animate-scale-in">
-            <GlassCard className="p-8 border-white/20 bg-white/80 dark:bg-[#15152a]/90 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <h2 className="text-xl font-thin text-slate-800 dark:text-white mb-6">
+          <div className="relative w-full h-full md:h-auto md:max-w-md animate-scale-in">
+            <GlassCard className="h-full md:h-auto p-4 pt-16 md:p-8 border-white/20 bg-white/95 dark:bg-[#15152a]/95 shadow-2xl flex flex-col">
+              <h2 className="text-xl font-thin text-slate-800 dark:text-white mb-6 shrink-0">
                 {editingTaskId ? 'Edit Task' : 'Create New Task'}
               </h2>
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pb-20 md:pb-0">
                 {/* Task Title and Client Search */}
                 <div>
                   <div className="flex justify-between items-center mb-1 ml-1">
@@ -649,7 +649,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                   </div>
                 </div>
                 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-4 flex gap-3 shrink-0">
                   <GlassButton variant="ghost" className="flex-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" onClick={() => setShowAddModal(false)}>Cancel</GlassButton>
                   <GlassButton className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400 text-white border-transparent" onClick={handleSaveTask}>
                     {editingTaskId ? 'Save Changes' : 'Create Task'}

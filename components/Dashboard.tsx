@@ -168,7 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
     <div className="space-y-6 animate-fade-in-up pb-8">
       <div className="flex flex-col md:flex-row justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-thin text-slate-900 dark:text-white mb-2">Command Center</h1>
+          <h1 className="text-3xl font-thin text-slate-900 dark:text-white mb-2">Dashboard</h1>
           <p className="text-slate-500 dark:text-slate-400 font-thin">
             Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, {currentUser.name.split(' ')[0]}.
           </p>

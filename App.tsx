@@ -13,14 +13,14 @@ import HistoryPage from './components/HistoryPage';
 import LeadDetailPanel from './components/LeadDetailPanel';
 import Login from './components/Login';
 import { GlassCard, GlassButton, GlassInput } from './components/GlassComponents';
-import { Plus, X, Sparkles, AlertCircle, ChevronDown, LayoutTemplate, Globe } from 'lucide-react';
+import { Plus, X, Sparkles, AlertCircle, ChevronDown, LayoutTemplate, Globe, Menu, Zap } from 'lucide-react';
 
 // Simple toast component local to App
 const Toast: React.FC<{ message: string; show: boolean }> = ({ message, show }) => (
-  <div className={`fixed bottom-8 right-8 z-[200] transform transition-all duration-500 ${show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-    <div className="glass-panel px-6 py-3 rounded-xl border-l-4 border-l-indigo-500 flex items-center gap-3 shadow-2xl bg-white dark:bg-white/10">
-      <Sparkles className="text-indigo-500 dark:text-indigo-400" size={18} />
-      <span className="text-slate-900 dark:text-white text-sm font-medium">{message}</span>
+  <div className={`fixed bottom-20 md:bottom-8 right-4 md:right-8 z-[200] transform transition-all duration-500 ${show ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+    <div className="glass-panel px-6 py-3 rounded-xl border-l-4 border-l-indigo-500 flex items-center gap-3 shadow-2xl bg-white dark:bg-white/10 max-w-[90vw]">
+      <Sparkles className="text-indigo-500 dark:text-indigo-400 shrink-0" size={18} />
+      <span className="text-slate-900 dark:text-white text-sm font-medium truncate">{message}</span>
     </div>
   </div>
 );
@@ -47,6 +47,9 @@ const App: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
   
+  // Mobile Menu State
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   // Lead Detail Panel State
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
@@ -564,11 +567,17 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     setCurrentView('dashboard');
+    setIsMobileMenuOpen(false);
   };
   
   const selectedLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
   const leadTasks = selectedLeadId ? tasks.filter(t => t.leadId === selectedLeadId) : [];
   const leadHistory = selectedLeadId ? historyLogs.filter(h => h.targetId === selectedLeadId) : [];
+
+  const handleViewChange = (view: View) => {
+    setCurrentView(view);
+    setIsMobileMenuOpen(false); // Close menu on navigation
+  };
 
   // RENDER LOGIC
   if (!currentUser) {
@@ -589,17 +598,38 @@ const App: React.FC = () => {
          <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[40%] rounded-full bg-blue-500/5 dark:bg-blue-600/10 blur-[120px]" />
       </div>
 
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-[#0F0F23]/80 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-4 py-3 flex items-center justify-between">
+         <div className="flex items-center gap-3">
+             <button 
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="p-2 -ml-2 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+             >
+                <Menu size={24} />
+             </button>
+             <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                     <Zap size={16} className="text-white fill-white" />
+                 </div>
+                 <span className="text-lg font-thin tracking-wide text-glow text-slate-800 dark:text-white">GlassFlow</span>
+             </div>
+         </div>
+         <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-8 h-8 rounded-full border border-slate-200 dark:border-white/10" />
+      </div>
+
       <Sidebar 
         currentView={currentView} 
-        onChangeView={setCurrentView} 
+        onChangeView={handleViewChange} 
         isDark={isDark} 
         toggleTheme={toggleTheme}
         user={currentUser}
         onLogout={handleLogout}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
 
-      <main className="relative z-10 pl-20 md:pl-64 min-h-screen transition-all">
-        <div className="max-w-[1600px] mx-auto p-4 md:p-8 h-screen overflow-y-auto custom-scrollbar">
+      <main className="relative z-10 pl-0 md:pl-20 lg:pl-64 min-h-screen transition-all pt-16 md:pt-0">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 h-[calc(100vh-64px)] md:h-screen overflow-y-auto custom-scrollbar">
           
           {currentView === 'dashboard' && (
             <Dashboard 
@@ -607,7 +637,7 @@ const App: React.FC = () => {
               history={historyLogs} 
               tasks={tasks}
               currentUser={currentUser}
-              onChangeView={setCurrentView}
+              onChangeView={handleViewChange}
             />
           )}
           
@@ -687,7 +717,7 @@ const App: React.FC = () => {
       {(currentView === 'pipeline' || currentView === 'lists') && (
         <button 
           onClick={openAddModal}
-          className="fixed bottom-8 right-8 z-40 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400 text-white flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-110 transition-all duration-300"
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400 text-white flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)] hover:scale-110 transition-all duration-300 active:scale-95"
         >
           <Plus size={24} />
         </button>
@@ -710,11 +740,11 @@ const App: React.FC = () => {
 
       {/* Add/Edit Lead Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4">
           <div className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowAddModal(false)} />
-          <div className="relative w-full max-w-md animate-scale-in max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <GlassCard className="p-8 border-white/20 bg-white/80 dark:bg-[#15152a]/90 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
+          <div className="relative w-full h-full md:h-auto md:max-w-md animate-scale-in">
+            <GlassCard className="h-full md:h-auto p-4 pt-16 md:p-8 border-white/20 bg-white/95 dark:bg-[#15152a]/95 shadow-2xl flex flex-col">
+              <div className="flex justify-between items-center mb-6 shrink-0">
                 <h2 className="text-xl font-thin text-slate-800 dark:text-white">
                   {editingLeadId ? 'Edit Lead' : 'Quick Add Lead'}
                 </h2>
@@ -723,7 +753,7 @@ const App: React.FC = () => {
                 </button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar pr-2 pb-20 md:pb-0">
                 <div>
                   <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Name</label>
                   <GlassInput 
@@ -812,7 +842,7 @@ const App: React.FC = () => {
                   />
                 </div>
                 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-4 flex gap-3 shrink-0">
                   <GlassButton variant="ghost" className="flex-1 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" onClick={() => setShowAddModal(false)}>Cancel</GlassButton>
                   <GlassButton className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 dark:hover:bg-indigo-400 text-white border-transparent" onClick={handleSaveLead}>
                     {editingLeadId ? 'Save Changes' : 'Create Lead'}
