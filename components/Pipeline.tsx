@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Lead, Stage } from '../types';
+import { Lead, Stage, User } from '../types';
 import { PIPELINE_COLUMNS } from '../constants';
 import { GlassCard, Badge } from './GlassComponents';
 import { MoreHorizontal, GripVertical } from 'lucide-react';
@@ -9,9 +8,10 @@ interface PipelineProps {
   leads: Lead[];
   onMoveLead: (leadId: string, newStage: Stage) => void;
   onLeadClick: (lead: Lead) => void;
+  currentUser: User;
 }
 
-const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) => {
+const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick, currentUser }) => {
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
@@ -32,6 +32,14 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
     }
   };
 
+  // Filter columns based on user role
+  const displayedColumns = PIPELINE_COLUMNS.filter(col => {
+    if (currentUser.role === 'user') {
+      return col.id !== 'proposal' && col.id !== 'won';
+    }
+    return true;
+  });
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="mb-6 flex justify-between items-center">
@@ -43,7 +51,7 @@ const Pipeline: React.FC<PipelineProps> = ({ leads, onMoveLead, onLeadClick }) =
       
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 snap-x snap-mandatory">
         <div className="flex h-full gap-4 px-1 min-w-max">
-          {PIPELINE_COLUMNS.map((column) => {
+          {displayedColumns.map((column) => {
             const columnLeads = leads.filter(l => l.stage === column.id);
 
             return (

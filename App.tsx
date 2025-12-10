@@ -671,6 +671,7 @@ const App: React.FC = () => {
                 leads={leads} 
                 onMoveLead={handleMoveLead} 
                 onLeadClick={(lead) => setSelectedLeadId(lead.id)}
+                currentUser={currentUser}
             />
           )}
           
