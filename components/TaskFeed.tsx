@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Task, User, HistoryLog } from '../types';
+import { Task, User, HistoryLog, Lead } from '../types';
 import { GlassCard, GlassButton, Badge } from './GlassComponents';
-import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown, Plus, GitCommit, FileEdit } from 'lucide-react';
+import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown, Plus, GitCommit, FileEdit, Building, Paperclip } from 'lucide-react';
 
 interface TaskFeedProps {
   tasks: Task[];
   users: User[];
+  leads: Lead[];
   currentUser: User;
   historyLogs: HistoryLog[];
   onAccept: (taskId: string) => void;
@@ -15,7 +16,7 @@ interface TaskFeedProps {
   onBatchDecline: (taskIds: string[], newAssigneeId?: string) => void;
 }
 
-const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyLogs, onAccept, onDecline, onBatchAccept, onBatchDecline }) => {
+const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, historyLogs, onAccept, onDecline, onBatchAccept, onBatchDecline }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // Selection State
@@ -316,7 +317,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 line-clamp-1">{task.description || 'No description provided.'}</p>
                         
                         {/* Metadata Grid */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
+                        <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-8 p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
                             {/* Assignee (Completed By) */}
                             <div className="flex items-center gap-3">
                                 <div className="relative shrink-0">
@@ -335,9 +336,6 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                                 </div>
                             </div>
 
-                            {/* Divider for desktop */}
-                            <div className="hidden sm:block w-px h-8 bg-slate-200 dark:bg-white/10" />
-
                             {/* Due Date */}
                             <div className="flex items-center gap-3">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${isOverdue ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 border-rose-100 dark:border-rose-500/20' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border-indigo-100 dark:border-indigo-500/20'}`}>
@@ -350,6 +348,36 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, currentUser, historyL
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Client (Optional) */}
+                            {task.leadId && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-500 border-blue-100 dark:border-blue-500/20">
+                                        <Building size={16} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Client</div>
+                                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                            {leads.find(l => l.id === task.leadId)?.company || 'Unknown'}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Attachments (Optional) */}
+                             {task.attachments && task.attachments.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 bg-slate-100 dark:bg-white/5 text-slate-500 border-slate-200 dark:border-white/10">
+                                        <Paperclip size={16} />
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Attachments</div>
+                                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                            {task.attachments.length} Files
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Activity Log - Concise Default */}

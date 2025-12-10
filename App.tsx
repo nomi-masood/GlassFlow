@@ -690,6 +690,7 @@ const App: React.FC = () => {
             <TaskFeed 
               tasks={tasks}
               users={users}
+              leads={leads}
               currentUser={currentUser}
               historyLogs={historyLogs}
               onAccept={handleAcceptTask}
