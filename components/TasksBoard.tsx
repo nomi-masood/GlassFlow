@@ -92,10 +92,16 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
 
   // Permission Helper
   const canEditTask = (task: Task) => {
-    // 1. Base Permission: Admin, Manager, or Creator
+    // 1. Admin Protection: Tasks assigned to an admin can only be edited by an admin
+    const assignee = MOCK_USERS.find(u => u.id === task.assigneeId);
+    if (assignee?.role === 'admin' && currentUser.role !== 'admin') {
+      return false;
+    }
+
+    // 2. Base Permission: Admin, Manager, or Creator
     const hasPermission = currentUser.role === 'admin' || currentUser.role === 'manager' || task.creatorId === currentUser.id;
     
-    // 2. Status Constraint: Only Admins can edit outside of 'todo'
+    // 3. Status Constraint: Only Admins can edit outside of 'todo'
     const isEditableStatus = currentUser.role === 'admin' || task.status === 'todo';
     
     return hasPermission && isEditableStatus;
