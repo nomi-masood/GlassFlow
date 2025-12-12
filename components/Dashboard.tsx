@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { GlassCard } from './GlassComponents';
@@ -122,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ leads, history, tasks, currentUse
     }, {} as Record<string, number>);
 
     return Object.entries(sources)
-      .map(([name, value]) => ({ 
+      .map(([name, value]: [string, number]) => ({ 
         name, 
         value,
         percent: Math.round((value / totalLeads) * 100)

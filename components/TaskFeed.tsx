@@ -63,6 +63,26 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
+  const getRelativeDueDate = (dateString: string) => {
+    if (!dateString) return null;
+    // Create dates in local time to avoid timezone offset issues
+    const [y, m, d] = dateString.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < -1) return { text: `${Math.abs(diffDays)} days ago`, color: 'text-rose-600 dark:text-rose-400' };
+    if (diffDays === -1) return { text: 'Yesterday', color: 'text-rose-600 dark:text-rose-400' };
+    if (diffDays === 0) return { text: 'Today', color: 'text-orange-500' };
+    if (diffDays === 1) return { text: 'Tomorrow', color: 'text-indigo-500' };
+    if (diffDays < 7 && diffDays > 1) return { text: `In ${diffDays} days`, color: 'text-indigo-500' };
+    return null;
+  };
+
   const getPriorityConfig = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -112,6 +132,9 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
     if (log.action === 'TASK_UPDATE') {
       if (details.includes('done') || details.includes('complet')) {
          return { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500' };
+      }
+      if (details.includes('reassigned')) {
+         return { icon: UserPlus, color: 'text-purple-500', bg: 'bg-purple-500' };
       }
       return { icon: FileEdit, color: 'text-slate-500', bg: 'bg-slate-500' };
     }
@@ -240,22 +263,24 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
       )}
 
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="grid grid-cols-1 gap-4 max-w-4xl mx-auto pb-6">
+        <div className="grid grid-cols-1 gap-4 w-full mx-auto pb-6">
           {reviewTasks.map(task => {
             const isSelected = selectedIds.has(task.id);
             const isHistoryOpen = expandedHistory.has(task.id);
             const pConfig = getPriorityConfig(task.priority);
             const PriorityIcon = pConfig.icon;
             
-            // Overdue Check (Task is pending review, if past due date it's overdue)
+            // Overdue Check
             const today = new Date();
             today.setHours(0,0,0,0);
             const dueDate = new Date(task.dueDate);
             dueDate.setHours(0,0,0,0);
             const isOverdue = dueDate < today;
+            const relativeDate = getRelativeDueDate(task.dueDate);
 
-            // Creator Details
+            // Creator & Lead Details
             const creator = users.find(u => u.id === task.creatorId);
+            const lead = task.leadId ? leads.find(l => l.id === task.leadId) : null;
             
             // Get relevant logs and sort by newest first
             const taskLogs = historyLogs.filter(h => h.targetId === task.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
@@ -269,7 +294,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                 key={task.id} 
                 className={`p-0 flex flex-col md:flex-row items-stretch group hover:border-indigo-500/30 transition-all overflow-hidden 
                   ${isSelected ? 'border-indigo-500/40 bg-indigo-50/10 dark:bg-indigo-900/10' : ''}
-                  ${isOverdue ? 'border-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.1)]' : ''}
+                  ${isOverdue ? 'border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.15)] bg-rose-50/30 dark:bg-rose-900/10' : ''}
                 `}
               >
                 {/* Selection Strip with Priority Border */}
@@ -286,16 +311,8 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
 
                 <div className="flex-1 p-4 md:p-5 flex flex-col md:flex-row gap-4 md:gap-6 items-start justify-between">
                     <div className="flex-1 w-full">
-                        {/* Header Row: Creator, Badges, Overdue Status */}
+                        {/* Header Row: Badges, Overdue Status */}
                         <div className="flex flex-wrap items-center gap-2 mb-3">
-                           {/* Creator Pill */}
-                           {creator && (
-                             <div className="flex items-center gap-2 pr-3 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 mr-1">
-                                <img src={creator.avatarUrl} alt={creator.name} className="w-5 h-5 rounded-full" />
-                                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">Created by {creator.name}</span>
-                             </div>
-                           )}
-
                            <span className={`text-[10px] px-2 py-0.5 rounded-md border font-medium uppercase tracking-wider flex items-center gap-1 ${pConfig.badge}`}>
                               <PriorityIcon size={12} />
                               {task.priority}
@@ -316,132 +333,123 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5 break-words">{task.title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 line-clamp-1">{task.description || 'No description provided.'}</p>
                         
-                        {/* Metadata Grid */}
-                        <div className="grid grid-cols-2 lg:flex lg:flex-wrap gap-4 lg:gap-8 p-3 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5">
-                            {/* Assignee (Completed By) */}
-                            <div className="flex items-center gap-3">
-                                <div className="relative shrink-0">
-                                    <img 
-                                        src={getUserAvatar(task.assigneeId)} 
-                                        alt={getUserName(task.assigneeId)}
-                                        className="w-8 h-8 rounded-full ring-2 ring-white dark:ring-[#1E1E2E]"
-                                    />
-                                    <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 border-2 border-white dark:border-[#1E1E2E]">
-                                        <CheckCircle2 size={8} />
-                                    </div>
+                        {/* Refined Metadata Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 mb-4">
+                            {/* Assignee */}
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Completed By</span>
+                                <div className="flex items-center gap-2">
+                                    <img src={getUserAvatar(task.assigneeId)} className="w-6 h-6 rounded-full" alt="assignee" />
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{getUserName(task.assigneeId)}</span>
                                 </div>
-                                <div>
-                                    <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Completed By</div>
-                                    <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">{getUserName(task.assigneeId)}</div>
+                            </div>
+                            
+                            {/* Creator */}
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reporter</span>
+                                <div className="flex items-center gap-2">
+                                    <img src={getUserAvatar(task.creatorId)} className="w-6 h-6 rounded-full" alt="creator" />
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{getUserName(task.creatorId)}</span>
                                 </div>
                             </div>
 
                             {/* Due Date */}
-                            <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${isOverdue ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 border-rose-100 dark:border-rose-500/20' : 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 border-indigo-100 dark:border-indigo-500/20'}`}>
-                                    <Calendar size={16} />
-                                </div>
-                                <div>
-                                    <div className={`text-[10px] font-medium uppercase tracking-wide ${isOverdue ? 'text-rose-500' : 'text-slate-400'}`}>Due Date</div>
-                                    <div className={`text-sm font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                                        {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Due Date</span>
+                                <div className={`flex items-center gap-1.5 text-sm font-semibold ${isOverdue ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                    <Calendar size={14} />
+                                    <span>{relativeDate?.text || new Date(task.dueDate).toLocaleDateString()}</span>
                                 </div>
                             </div>
 
-                            {/* Client (Optional) */}
-                            {task.leadId && (
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 bg-blue-50 dark:bg-blue-500/10 text-blue-500 border-blue-100 dark:border-blue-500/20">
-                                        <Building size={16} />
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Client</div>
-                                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                            {leads.find(l => l.id === task.leadId)?.company || 'Unknown'}
-                                        </div>
+                            {/* Client/Context */}
+                            {lead ? (
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Client</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        <Building size={14} />
+                                        <span className="truncate">{lead.company}</span>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* Attachments (Optional) */}
-                             {task.attachments && task.attachments.length > 0 && (
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 bg-slate-100 dark:bg-white/5 text-slate-500 border-slate-200 dark:border-white/10">
-                                        <Paperclip size={16} />
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Attachments</div>
-                                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                            {task.attachments.length} Files
-                                        </div>
+                            ) : (
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Attachments</span>
+                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                        <Paperclip size={14} />
+                                        <span>{task.attachments?.length || 0} Files</span>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Activity Log - Concise Default */}
-                        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-white/5">
-                            {taskLogs.length > 0 ? (
-                            <div>
-                                <button 
-                                    onClick={() => toggleHistory(task.id)}
-                                    className="w-full flex items-center justify-between group/history text-left"
-                                >
-                                    <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 overflow-hidden">
-                                        <div className={`w-6 h-6 rounded-full shrink-0 flex items-center justify-center transition-colors ${isHistoryOpen ? 'bg-indigo-100 dark:bg-indigo-500/20' : 'bg-slate-100 dark:bg-white/5'}`}>
-                                            <LatestIcon size={12} className={latestLogConfig.color} />
-                                        </div>
-                                        <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 overflow-hidden">
-                                            <span className="font-medium text-slate-700 dark:text-slate-300">{taskLogs[0].userName}</span>
-                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
-                                            <span className="truncate max-w-[150px] sm:max-w-[250px]">
-                                                {taskLogs[0].details.replace(task.title, '').replace(':', '').trim() || 'Updated task'}
-                                            </span>
-                                            <span className="hidden sm:inline w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
-                                            <span className="opacity-70 shrink-0">{formatTimeAgo(taskLogs[0].timestamp)}</span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-1 text-[10px] font-medium text-indigo-500 opacity-60 group-hover/history:opacity-100 transition-opacity shrink-0 ml-2">
-                                        {isHistoryOpen ? 'Collapse' : (taskLogs.length > 1 ? `${taskLogs.length - 1} more updates` : 'Details')}
+                        {/* History Log Section */}
+                        <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/5">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <History size={12} /> History
+                                </h4>
+                                {taskLogs.length > 0 && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); toggleHistory(task.id); }}
+                                        className="text-[10px] font-medium text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                                    >
+                                        {isHistoryOpen ? 'Collapse' : 'Expand'}
                                         {isHistoryOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                    </div>
-                                </button>
-
-                                {isHistoryOpen && (
-                                    <div className="mt-4 pl-3 space-y-4 relative border-l border-slate-200 dark:border-white/10 ml-3 animate-fade-in-up">
-                                        {taskLogs.map((log, i) => {
-                                            const config = getLogConfig(log);
-                                            const LogIcon = config.icon;
-                                            return (
-                                                <div key={log.id} className="relative pl-6">
-                                                    <div className={`absolute -left-[10px] top-0 w-5 h-5 rounded-full border-2 border-white dark:border-[#1E1E2E] flex items-center justify-center z-10 ${config.bg} text-white shadow-sm`}>
-                                                        <LogIcon size={10} />
-                                                    </div>
-                                                    <div className="text-xs">
-                                                        <span className="font-semibold text-slate-800 dark:text-white">{log.userName}</span>
-                                                        <span className="text-slate-500 dark:text-slate-400 ml-1 block sm:inline">{log.details.replace(task.title, '').replace(':', '').trim()}</span>
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 mt-0.5">
-                                                        {new Date(log.timestamp).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    </button>
                                 )}
                             </div>
+
+                            {taskLogs.length > 0 ? (
+                                <div className={`space-y-4 ${isHistoryOpen ? 'animate-fade-in-up' : ''}`}>
+                                    {(isHistoryOpen ? taskLogs : [taskLogs[0]]).map((log, i) => {
+                                        const config = getLogConfig(log);
+                                        const LogIcon = config.icon;
+                                        return (
+                                            <div key={log.id} className="flex gap-3 relative">
+                                                {/* Connector Line */}
+                                                {isHistoryOpen && i !== taskLogs.length - 1 && (
+                                                    <div className="absolute left-[9px] top-5 bottom-[-16px] w-px bg-slate-200 dark:bg-white/10" />
+                                                )}
+                                                
+                                                <div className={`relative z-10 w-5 h-5 rounded-full flex items-center justify-center shrink-0 border border-white dark:border-[#1E1E2E] shadow-sm ${config.bg} text-white mt-0.5`}>
+                                                    <LogIcon size={10} />
+                                                </div>
+                                                
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                                        <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                            {log.userName}
+                                                        </p>
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {formatTimeAgo(log.timestamp)}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
+                                                        {log.details.replace(task.title, '').replace(':', '').trim()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    {!isHistoryOpen && taskLogs.length > 1 && (
+                                         <div 
+                                            onClick={() => toggleHistory(task.id)}
+                                            className="text-[10px] text-slate-400 text-center cursor-pointer hover:text-indigo-500 transition-colors pt-1"
+                                         >
+                                            + {taskLogs.length - 1} more updates
+                                         </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="text-xs text-slate-400 italic flex items-center gap-2 py-1">
-                                    <Clock size={12} /> No activity recorded
+                                    <Clock size={12} /> No history recorded
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Actions Column */}
-                    <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 shrink-0 self-start">
+                    <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 shrink-0 self-end">
                         <GlassButton 
                         variant="ghost" 
                         onClick={() => openDeclineModal(task)}

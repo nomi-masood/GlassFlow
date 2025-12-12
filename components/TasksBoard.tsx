@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, User, TaskPriority, Lead, Attachment } from '../types';
 import { GlassCard, Badge, GlassButton, GlassInput } from './GlassComponents';
-import { Calendar, CheckCircle2, Circle, Clock, MoreHorizontal, Plus, User as UserIcon, Filter, Tag, Edit, Trash, Search, Paperclip, FileText, Image as ImageIcon, X, ArrowUp, ArrowDown, ListFilter, Download, Lock, CheckSquare } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Clock, MoreHorizontal, Plus, User as UserIcon, Filter, Tag, Edit, Trash, Search, Paperclip, FileText, Image as ImageIcon, X, ArrowUp, ArrowDown, ListFilter, Download, Lock, CheckSquare, Building, AlertCircle } from 'lucide-react';
 import { MOCK_USERS } from '../constants';
 
 interface TasksBoardProps {
@@ -21,12 +21,15 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
   const [filterMode, setFilterMode] = useState<'all' | 'mine'>('mine');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [sortBy, setSortBy] = useState<'date' | 'priority'>('date');
+  
+  // Modals & Panels State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   
   // Menu State
   const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null);
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +90,17 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
     }
   });
 
+  // Permission Helper
+  const canEditTask = (task: Task) => {
+    // 1. Base Permission: Admin, Manager, or Creator
+    const hasPermission = currentUser.role === 'admin' || currentUser.role === 'manager' || task.creatorId === currentUser.id;
+    
+    // 2. Status Constraint: Only Admins can edit outside of 'todo'
+    const isEditableStatus = currentUser.role === 'admin' || task.status === 'todo';
+    
+    return hasPermission && isEditableStatus;
+  };
+
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
     e.dataTransfer.effectAllowed = 'move';
@@ -127,6 +141,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
     }
 
     setActiveMenuTaskId(null);
+    setViewingTask(null); // Close detail view if open
     setShowAddModal(true);
   };
 
@@ -316,10 +331,11 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                                 e.preventDefault();
                             }
                         }}
-                        className={isAssignee ? "cursor-grab active:cursor-grabbing" : "cursor-default"}
+                        onClick={() => setViewingTask(task)}
+                        className={`${isAssignee ? "cursor-grab active:cursor-grabbing" : "cursor-default"} relative`}
                         title={!isAssignee ? "Only the user assigned to this task can update its status. Please log in with the assigned account." : ""}
                       >
-                        <GlassCard className={`p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5 group relative ${!isAssignee ? 'opacity-75 grayscale-[0.3]' : ''}`}>
+                        <GlassCard className={`p-4 hover:border-indigo-500/30 hover:shadow-lg !bg-white/70 dark:!bg-white/[0.02] hover:!bg-white dark:hover:!bg-white/[0.08] backdrop-blur-sm border-slate-200 dark:border-white/5 group relative cursor-pointer ${!isAssignee ? 'opacity-75 grayscale-[0.3]' : ''}`}>
                           <div className="flex justify-between items-start mb-2 relative">
                             <div className="flex gap-2">
                               <span className={`text-[10px] px-2 py-0.5 rounded-full border uppercase tracking-wider font-medium ${getPriorityColor(task.priority)}`}>
@@ -338,7 +354,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
                                         <Lock size={12} className="text-slate-400 dark:text-slate-500" />
                                     </div>
                                 )}
-                                {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
+                                {canEditTask(task) && (
                                     <button onClick={(e) => { e.stopPropagation(); setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id); }}>
                                     <MoreHorizontal size={16} className="text-slate-400 hover:text-indigo-500 transition-colors" />
                                     </button>
@@ -347,7 +363,7 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
 
                             {activeMenuTaskId === task.id && (
                                 <>
-                                  <div className="fixed inset-0 z-10" onClick={() => setActiveMenuTaskId(null)} />
+                                  <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setActiveMenuTaskId(null); }} />
                                   <div className="absolute right-0 top-6 z-20 w-32 glass-panel bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden animate-scale-in">
                                   <button 
                                     onClick={(e) => { e.stopPropagation(); openEditModal(task); }}
@@ -435,6 +451,189 @@ const TasksBoard: React.FC<TasksBoardProps> = ({ tasks, leads, currentUser, onUp
           })}
         </div>
       </div>
+
+      {/* Task Details Slide-Over */}
+      {viewingTask && (
+        <>
+            <div 
+                className="fixed inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm z-50 transition-opacity" 
+                onClick={() => setViewingTask(null)}
+            />
+            <div className="fixed inset-y-0 right-0 w-full md:w-[500px] z-[51] bg-white/95 dark:bg-[#15152a]/95 backdrop-blur-xl border-l border-white/20 shadow-2xl flex flex-col animate-slide-in-right transform transition-transform duration-300">
+                <div className="p-6 border-b border-slate-200 dark:border-white/10 flex justify-between items-start bg-slate-50/50 dark:bg-white/[0.02]">
+                    <div className="space-y-1">
+                         <div className="flex items-center gap-2">
+                            <Badge color={getPriorityColor(viewingTask.priority).replace('border', 'ring-1').split(' ')[0]}>{viewingTask.priority}</Badge>
+                            {viewingTask.type && (
+                                <span className="text-xs px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10">
+                                    {viewingTask.type}
+                                </span>
+                            )}
+                         </div>
+                         <h2 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{viewingTask.title}</h2>
+                    </div>
+                    <button onClick={() => setViewingTask(null)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 transition-colors">
+                        <X size={20} />
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+                    {/* Status Section */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</span>
+                        <div className="flex items-center gap-2">
+                            {viewingTask.status === 'todo' && <Circle size={16} className="text-slate-500" />}
+                            {viewingTask.status === 'in-progress' && <Clock size={16} className="text-blue-500" />}
+                            {viewingTask.status === 'review' && <CheckSquare size={16} className="text-emerald-500" />}
+                            <span className="text-sm font-semibold text-slate-800 dark:text-white capitalize">{viewingTask.status.replace('-', ' ')}</span>
+                        </div>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                         <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">Description</label>
+                         <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {viewingTask.description || <span className="italic text-slate-400">No description provided.</span>}
+                         </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Due Date</label>
+                            <div className="flex items-center gap-2 text-sm text-slate-800 dark:text-white font-medium">
+                                <Calendar size={16} className="text-slate-400" />
+                                {new Date(viewingTask.dueDate).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Priority</label>
+                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium border ${getPriorityColor(viewingTask.priority)}`}>
+                                {viewingTask.priority === 'high' && <AlertCircle size={14} />}
+                                {viewingTask.priority === 'medium' && <Clock size={14} />}
+                                {viewingTask.priority === 'low' && <ArrowDown size={14} />}
+                                <span className="capitalize">{viewingTask.priority}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr className="border-slate-100 dark:border-white/5" />
+
+                    {/* People */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                             <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">Assignee</label>
+                             <div className="flex items-center gap-3">
+                                 <img src={getUserAvatar(viewingTask.assigneeId)} alt="assignee" className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10" />
+                                 <div>
+                                     <div className="text-sm font-semibold text-slate-800 dark:text-white">{getUserName(viewingTask.assigneeId)}</div>
+                                     <div className="text-xs text-slate-500">Responsible</div>
+                                 </div>
+                             </div>
+                        </div>
+                        <div>
+                             <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">Creator</label>
+                             <div className="flex items-center gap-3">
+                                 <img src={getUserAvatar(viewingTask.creatorId)} alt="creator" className="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/10" />
+                                 <div>
+                                     <div className="text-sm font-semibold text-slate-800 dark:text-white">{getUserName(viewingTask.creatorId)}</div>
+                                     <div className="text-xs text-slate-500">Reporter</div>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* Linked Client */}
+                    {viewingTask.leadId && (
+                        <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/10">
+                             <div className="flex items-center gap-2 mb-2 text-blue-600 dark:text-blue-400">
+                                 <Building size={16} />
+                                 <span className="text-xs font-bold uppercase tracking-wide">Linked Client</span>
+                             </div>
+                             <div className="flex items-center justify-between">
+                                 <div>
+                                     <div className="text-sm font-bold text-slate-800 dark:text-white">
+                                         {leads.find(l => l.id === viewingTask.leadId)?.name}
+                                     </div>
+                                     <div className="text-xs text-slate-500 dark:text-slate-400">
+                                         {leads.find(l => l.id === viewingTask.leadId)?.company}
+                                     </div>
+                                 </div>
+                                 <div className="px-2 py-1 bg-white dark:bg-white/10 rounded text-xs font-medium text-slate-600 dark:text-slate-300">
+                                     {leads.find(l => l.id === viewingTask.leadId)?.stage}
+                                 </div>
+                             </div>
+                        </div>
+                    )}
+
+                    {/* Attachments */}
+                    <div>
+                        <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block flex items-center gap-2">
+                            <Paperclip size={14} /> Attachments ({viewingTask.attachments?.length || 0})
+                        </label>
+                        {viewingTask.attachments && viewingTask.attachments.length > 0 ? (
+                            <div className="space-y-2">
+                                {viewingTask.attachments.map(att => (
+                                    <a 
+                                        key={att.id}
+                                        href={att.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-indigo-500/30 transition-all group"
+                                    >
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                                {att.type.includes('image') ? <ImageIcon size={16} /> : <FileText size={16} />}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-medium text-slate-800 dark:text-white truncate">{att.name}</div>
+                                                <div className="text-xs text-slate-500">{formatFileSize(att.size)}</div>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
+                                            <Download size={16} />
+                                        </div>
+                                    </a>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="p-4 border border-dashed border-slate-200 dark:border-white/10 rounded-xl text-center text-xs text-slate-400">
+                                No attachments
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer Actions */}
+                {canEditTask(viewingTask) && (
+                    <div className="p-4 border-t border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex gap-3">
+                         <GlassButton 
+                            variant="ghost" 
+                            className="flex-1 text-slate-500 dark:text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                            onClick={() => {
+                                onDeleteTask(viewingTask.id);
+                                setViewingTask(null);
+                            }}
+                         >
+                            <Trash size={16} /> Delete
+                         </GlassButton>
+                         <GlassButton 
+                            className="flex-1 bg-indigo-600 dark:bg-indigo-500 text-white hover:bg-indigo-500 dark:hover:bg-indigo-400 border-transparent shadow-lg shadow-indigo-500/20"
+                            onClick={() => openEditModal(viewingTask)}
+                         >
+                            <Edit size={16} /> Edit Task
+                         </GlassButton>
+                    </div>
+                )}
+            </div>
+            <style>{`
+                @keyframes slide-in-right {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                }
+                .animate-slide-in-right { animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+            `}</style>
+        </>
+      )}
 
       {/* Add/Edit Task Modal */}
       {showAddModal && (

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, Stage, View, User, Task, TaskStatus, HistoryLog, ActionType, LeadActivity } from './types';
 import { MOCK_LEADS, MOCK_USERS, MOCK_TASKS, PIPELINE_COLUMNS, MOCK_HISTORY, LEAD_SOURCES, LEAD_TYPES } from './constants';
@@ -510,7 +511,7 @@ const App: React.FC = () => {
     };
     setTasks([...tasks, newTask]);
     logAction('TASK_CREATE', `Created task: ${newTask.title}`, newTask.id, newTask.title);
-    showToast('Task assigned successfully');
+    showToast('Task created successfully');
   };
 
   const handleEditTask = (updatedTask: Task) => {
