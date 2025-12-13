@@ -91,25 +91,25 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
       case 'high':
         return {
           badge: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20',
-          border: 'border-l-rose-500',
+          borderClasses: 'border-t-rose-500 md:border-t-0 md:border-l-rose-500',
           icon: AlertCircle
         };
       case 'medium':
         return {
           badge: 'text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20',
-          border: 'border-l-orange-500',
+          borderClasses: 'border-t-orange-500 md:border-t-0 md:border-l-orange-500',
           icon: Clock
         };
       case 'low':
         return {
           badge: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20',
-          border: 'border-l-blue-500',
+          borderClasses: 'border-t-blue-500 md:border-t-0 md:border-l-blue-500',
           icon: ArrowDown
         };
       default:
         return {
           badge: 'text-slate-600 bg-slate-50 border-slate-200',
-          border: 'border-l-slate-300',
+          borderClasses: 'border-t-slate-300 md:border-t-0 md:border-l-slate-300',
           icon: Clock
         };
     }
@@ -247,8 +247,8 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                 <span>Select All ({reviewTasks.length})</span>
             </button>
 
-            <div className={`flex items-center gap-2 sm:gap-3 w-full sm:w-auto transition-opacity duration-300 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-2 hidden sm:inline">{selectedIds.size} selected</span>
+            <div className={`flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto transition-opacity duration-300 ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 mr-2 w-full sm:w-auto mb-2 sm:mb-0 block sm:inline">{selectedIds.size} selected</span>
                 <button 
                     onClick={openBatchDeclineModal} 
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg border border-rose-200 dark:border-rose-500/20 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
@@ -299,9 +299,6 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                 return true;
             });
             
-            // For preview (collapsed view), show the latest log regardless of filter, or show latest filtered? 
-            // Better to show latest relevant to filter, or if empty showing latest general.
-            // Let's show first of filtered if available, else first of all.
             const latestLog = filteredLogs.length > 0 ? filteredLogs[0] : taskLogs[0];
 
             return (
@@ -312,9 +309,9 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                   ${isOverdue ? 'border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.15)] bg-rose-50/30 dark:bg-rose-900/10' : ''}
                 `}
               >
-                {/* Selection Strip with Priority Border */}
+                {/* Selection Strip with Responsive Priority Border */}
                 <div 
-                    className={`w-full md:w-12 h-12 md:h-auto flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-white/5 cursor-pointer bg-slate-50/50 dark:bg-white/[0.02] hover:bg-indigo-50/50 dark:hover:bg-white/[0.05] transition-colors shrink-0 border-l-4 ${pConfig.border}`}
+                    className={`w-full md:w-12 h-12 md:h-auto flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-white/5 cursor-pointer bg-slate-50/50 dark:bg-white/[0.02] hover:bg-indigo-50/50 dark:hover:bg-white/[0.05] transition-colors shrink-0 border-t-4 md:border-t-0 md:border-l-4 ${pConfig.borderClasses}`}
                     onClick={() => toggleSelect(task.id)}
                 >
                     {isSelected ? (
@@ -348,7 +345,7 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                         <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1.5 break-words">{task.title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 line-clamp-1">{task.description || 'No description provided.'}</p>
                         
-                        {/* Refined Metadata Grid */}
+                        {/* Refined Metadata Grid - 2 cols on mobile, 4 on desktop */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 mb-4">
                             {/* Assignee */}
                             <div className="flex flex-col">
@@ -487,20 +484,20 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                         </div>
                     </div>
 
-                    {/* Actions Column */}
+                    {/* Actions Column - Full width on mobile, auto on desktop */}
                     <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100 dark:border-white/5 shrink-0 self-end">
                         <GlassButton 
                         variant="ghost" 
                         onClick={() => openDeclineModal(task)}
                         className="flex-1 md:flex-none text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-200 justify-center"
                         >
-                        <XCircle size={18} /> <span className="md:hidden">Decline</span>
+                        <XCircle size={18} /> <span className="ml-1">Decline</span>
                         </GlassButton>
                         <GlassButton 
                         onClick={() => onAccept(task.id)}
                         className="flex-1 md:flex-none bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white border-transparent shadow-lg shadow-emerald-500/20 justify-center"
                         >
-                        <CheckCircle2 size={18} /> Accept
+                        <CheckCircle2 size={18} /> <span className="ml-1">Accept</span>
                         </GlassButton>
                     </div>
                 </div>
