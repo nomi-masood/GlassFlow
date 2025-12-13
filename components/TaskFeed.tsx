@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Task, User, HistoryLog, Lead } from '../types';
 import { GlassCard, GlassButton, Badge } from './GlassComponents';
-import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown, Plus, GitCommit, FileEdit, Building, Paperclip } from 'lucide-react';
+import { CheckCircle2, XCircle, Search, Clock, Calendar, User as UserIcon, ArrowLeft, RefreshCw, X, UserPlus, RotateCcw, ArrowRight, Square, CheckSquare, Tag, AlertCircle, History, ChevronDown, ChevronUp, Activity, ArrowDown, Plus, GitCommit, FileEdit, Building, Paperclip, Filter } from 'lucide-react';
 
 interface TaskFeedProps {
   tasks: Task[];
@@ -24,6 +24,9 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
 
   // Expanded History State
   const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
+
+  // History Filter State per Task
+  const [taskHistoryFilters, setTaskHistoryFilters] = useState<Record<string, string>>({});
 
   // Modal State
   const [declineModal, setDeclineModal] = useState<{ 
@@ -283,11 +286,23 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
             const lead = task.leadId ? leads.find(l => l.id === task.leadId) : null;
             
             // Get relevant logs and sort by newest first
-            const taskLogs = historyLogs.filter(h => h.targetId === task.id).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            const activeFilter = taskHistoryFilters[task.id] || 'all';
             
-            const latestLog = taskLogs[0];
-            const latestLogConfig = latestLog ? getLogConfig(latestLog) : { icon: Activity, color: 'text-slate-400', bg: 'bg-slate-400' };
-            const LatestIcon = latestLogConfig.icon;
+            const taskLogs = historyLogs
+              .filter(h => h.targetId === task.id)
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            
+            const filteredLogs = taskLogs.filter(log => {
+                if (activeFilter === 'all') return true;
+                if (activeFilter === 'review') return log.action === 'TASK_REVIEW';
+                if (activeFilter === 'update') return log.action === 'TASK_UPDATE' || log.action === 'TASK_CREATE';
+                return true;
+            });
+            
+            // For preview (collapsed view), show the latest log regardless of filter, or show latest filtered? 
+            // Better to show latest relevant to filter, or if empty showing latest general.
+            // Let's show first of filtered if available, else first of all.
+            const latestLog = filteredLogs.length > 0 ? filteredLogs[0] : taskLogs[0];
 
             return (
               <GlassCard 
@@ -385,10 +400,34 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                         {/* History Log Section */}
                         <div className="mt-5 pt-4 border-t border-slate-100 dark:border-white/5">
                             <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                    <History size={12} /> History
-                                </h4>
-                                {taskLogs.length > 0 && (
+                                <div className="flex items-center gap-3">
+                                    <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <History size={12} /> History
+                                    </h4>
+                                    
+                                    {/* History Filter */}
+                                    <div className="relative group" onClick={(e) => e.stopPropagation()}>
+                                        <div className="flex items-center gap-1 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded cursor-pointer hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+                                            <Filter size={10} />
+                                            <span>
+                                                {activeFilter === 'all' ? 'All' : activeFilter === 'review' ? 'Reviews' : 'Updates'}
+                                            </span>
+                                            <ChevronDown size={10} />
+                                        </div>
+                                        {/* Dropdown - simplified with select for better mobile handling */}
+                                        <select
+                                            className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                                            value={activeFilter}
+                                            onChange={(e) => setTaskHistoryFilters(prev => ({...prev, [task.id]: e.target.value}))}
+                                        >
+                                            <option value="all">All Activity</option>
+                                            <option value="review">Reviews</option>
+                                            <option value="update">Updates & Changes</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {filteredLogs.length > 0 && (
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); toggleHistory(task.id); }}
                                         className="text-[10px] font-medium text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
@@ -399,15 +438,15 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                                 )}
                             </div>
 
-                            {taskLogs.length > 0 ? (
+                            {filteredLogs.length > 0 ? (
                                 <div className={`space-y-4 ${isHistoryOpen ? 'animate-fade-in-up' : ''}`}>
-                                    {(isHistoryOpen ? taskLogs : [taskLogs[0]]).map((log, i) => {
+                                    {(isHistoryOpen ? filteredLogs : [filteredLogs[0]]).map((log, i) => {
                                         const config = getLogConfig(log);
                                         const LogIcon = config.icon;
                                         return (
                                             <div key={log.id} className="flex gap-3 relative">
                                                 {/* Connector Line */}
-                                                {isHistoryOpen && i !== taskLogs.length - 1 && (
+                                                {isHistoryOpen && i !== filteredLogs.length - 1 && (
                                                     <div className="absolute left-[9px] top-5 bottom-[-16px] w-px bg-slate-200 dark:bg-white/10" />
                                                 )}
                                                 
@@ -431,18 +470,18 @@ const TaskFeed: React.FC<TaskFeedProps> = ({ tasks, users, leads, currentUser, h
                                             </div>
                                         );
                                     })}
-                                    {!isHistoryOpen && taskLogs.length > 1 && (
+                                    {!isHistoryOpen && filteredLogs.length > 1 && (
                                          <div 
                                             onClick={() => toggleHistory(task.id)}
                                             className="text-[10px] text-slate-400 text-center cursor-pointer hover:text-indigo-500 transition-colors pt-1"
                                          >
-                                            + {taskLogs.length - 1} more updates
+                                            + {filteredLogs.length - 1} more updates
                                          </div>
                                     )}
                                 </div>
                             ) : (
                                 <div className="text-xs text-slate-400 italic flex items-center gap-2 py-1">
-                                    <Clock size={12} /> No history recorded
+                                    <Clock size={12} /> No history for this filter
                                 </div>
                             )}
                         </div>

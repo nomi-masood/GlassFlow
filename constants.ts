@@ -51,6 +51,14 @@ export const MOCK_USERS: User[] = [
   }
 ];
 
+// Helpers for mock dates
+const now = new Date();
+const today = new Date(now).toISOString();
+const yesterday = new Date(now.getTime() - 86400000).toISOString();
+const twoDaysAgo = new Date(now.getTime() - 86400000 * 2).toISOString();
+const lastWeek = new Date(now.getTime() - 86400000 * 7).toISOString();
+const lastMonth = new Date(now.getTime() - 86400000 * 30).toISOString();
+
 export const MOCK_LEADS: Lead[] = [
   {
     id: '1',
@@ -64,6 +72,7 @@ export const MOCK_LEADS: Lead[] = [
     source: 'Direct',
     type: 'Inbound',
     notes: 'Key decision maker. Interested in the enterprise plan.',
+    createdAt: today, // Added Today
     activities: [
       {
         id: 'a1',
@@ -83,6 +92,32 @@ export const MOCK_LEADS: Lead[] = [
     ]
   },
   {
+    id: '7',
+    name: 'Pam Beesly',
+    company: 'Pratt Institute',
+    email: 'pam@art.edu',
+    stage: 'prospect',
+    tags: ['Education'],
+    lastActive: 'Just now',
+    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&h=100',
+    source: 'Event',
+    type: 'Inbound',
+    createdAt: today // Added Today
+  },
+  {
+    id: '12',
+    name: 'Darryl Philbin',
+    company: 'Athlead',
+    email: 'darryl@athlead.com',
+    stage: 'proposal',
+    tags: ['Sports', 'Marketing'],
+    lastActive: '5h ago',
+    avatarUrl: 'https://images.unsplash.com/photo-1586297135537-94bc9ba060aa?auto=format&fit=crop&w=100&h=100',
+    source: 'Partner',
+    type: 'Expansion',
+    createdAt: today // Added Today
+  },
+  {
     id: '2',
     name: 'Bob Chen',
     company: 'Starlight Media',
@@ -93,7 +128,8 @@ export const MOCK_LEADS: Lead[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&h=100',
     source: 'Referral',
     type: 'Referral',
-    activities: []
+    activities: [],
+    createdAt: yesterday
   },
   {
     id: '3',
@@ -106,6 +142,7 @@ export const MOCK_LEADS: Lead[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100',
     source: 'Social',
     type: 'Inbound',
+    createdAt: yesterday,
     activities: [
       {
         id: 'a3',
@@ -119,18 +156,6 @@ export const MOCK_LEADS: Lead[] = [
     ]
   },
   {
-    id: '4',
-    name: 'Mike Ross',
-    company: 'Pearson Specter',
-    email: 'mross@pearson.com',
-    stage: 'won',
-    tags: ['Legal'],
-    lastActive: '1w ago',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&h=100',
-    source: 'Direct',
-    type: 'Outbound'
-  },
-  {
     id: '5',
     name: 'Jessica Pearson',
     company: 'Pearson Specter',
@@ -140,7 +165,21 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '5m ago',
     avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&h=100',
     source: 'Ads',
-    type: 'Cold'
+    type: 'Cold',
+    createdAt: twoDaysAgo
+  },
+  {
+    id: '4',
+    name: 'Mike Ross',
+    company: 'Pearson Specter',
+    email: 'mross@pearson.com',
+    stage: 'won',
+    tags: ['Legal'],
+    lastActive: '1w ago',
+    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&h=100',
+    source: 'Direct',
+    type: 'Outbound',
+    createdAt: lastWeek
   },
   {
     id: '6',
@@ -152,19 +191,8 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '3d ago',
     avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=100&h=100',
     source: 'Partner',
-    type: 'Expansion'
-  },
-  {
-    id: '7',
-    name: 'Pam Beesly',
-    company: 'Pratt Institute',
-    email: 'pam@art.edu',
-    stage: 'prospect',
-    tags: ['Education'],
-    lastActive: 'Just now',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&h=100',
-    source: 'Event',
-    type: 'Inbound'
+    type: 'Expansion',
+    createdAt: lastWeek
   },
   {
     id: '8',
@@ -177,7 +205,8 @@ export const MOCK_LEADS: Lead[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&h=100',
     source: 'Social',
     type: 'Outbound',
-    lostReason: 'Price too high'
+    lostReason: 'Price too high',
+    createdAt: lastMonth
   },
   {
     id: '9',
@@ -189,7 +218,8 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '12h ago',
     avatarUrl: 'https://images.unsplash.com/photo-1554151228-14d9def656ec?auto=format&fit=crop&w=100&h=100',
     source: 'Ads',
-    type: 'Cold'
+    type: 'Cold',
+    createdAt: lastMonth
   },
   {
     id: '10',
@@ -201,7 +231,8 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '3d ago',
     avatarUrl: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&w=100&h=100',
     source: 'Referral',
-    type: 'Referral'
+    type: 'Referral',
+    createdAt: lastMonth
   },
   {
     id: '11',
@@ -213,19 +244,8 @@ export const MOCK_LEADS: Lead[] = [
     lastActive: '1h ago',
     avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&h=100',
     source: 'Social',
-    type: 'Inbound'
-  },
-  {
-    id: '12',
-    name: 'Darryl Philbin',
-    company: 'Athlead',
-    email: 'darryl@athlead.com',
-    stage: 'proposal',
-    tags: ['Sports', 'Marketing'],
-    lastActive: '5h ago',
-    avatarUrl: 'https://images.unsplash.com/photo-1586297135537-94bc9ba060aa?auto=format&fit=crop&w=100&h=100',
-    source: 'Partner',
-    type: 'Expansion'
+    type: 'Inbound',
+    createdAt: lastMonth
   }
 ];
 

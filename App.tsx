@@ -13,6 +13,7 @@ import HistoryPage from './components/HistoryPage';
 import LeadDetailPanel from './components/LeadDetailPanel';
 import SettingsPage from './components/SettingsPage';
 import Login from './components/Login';
+import CommandPalette from './components/CommandPalette';
 import { GlassCard, GlassButton, GlassInput } from './components/GlassComponents';
 import { Plus, X, Sparkles, AlertCircle, ChevronDown, LayoutTemplate, Globe, Menu, Zap } from 'lucide-react';
 
@@ -51,6 +52,9 @@ const App: React.FC = () => {
   // Mobile Menu State
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Command Palette State
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
   // Lead Detail Panel State
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
@@ -79,6 +83,18 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDark]);
+
+  // Keyboard shortcut for Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const toggleTheme = () => setIsDark(!isDark);
 
@@ -210,7 +226,9 @@ const App: React.FC = () => {
           tags: [newLead.type, 'New'],
           lastActive: 'Just now',
           avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 100)}`,
-          notes: newLead.notes
+          notes: newLead.notes,
+          assigneeId: currentUser?.id, // Default assign to creator
+          createdAt: new Date().toISOString() // Set creation date
       };
       setLeads([...leads, lead]);
       logAction('LEAD_CREATE', `Created new lead: ${lead.name}`, lead.id, lead.name);
@@ -258,6 +276,21 @@ const App: React.FC = () => {
     setLeads(prev => prev.filter(l => !ids.includes(l.id)));
     logAction('LEAD_DELETE', `Bulk deleted ${ids.length} leads`);
     showToast(`Deleted ${ids.length} leads`);
+  };
+
+  const handleBulkAssignLeads = (leadIds: string[], assigneeId: string) => {
+    const assignee = users.find(u => u.id === assigneeId);
+    if (!assignee) return;
+
+    setLeads(prev => prev.map(l => {
+        if (leadIds.includes(l.id)) {
+            return { ...l, assigneeId };
+        }
+        return l;
+    }));
+    
+    logAction('LEAD_ASSIGN', `Bulk assigned ${leadIds.length} leads to ${assignee.name}`);
+    showToast(`Assigned ${leadIds.length} leads to ${assignee.name}`);
   };
 
   const handleDeleteLead = (id: string) => {
@@ -362,7 +395,9 @@ const App: React.FC = () => {
             lastActive: 'Just now',
             avatarUrl: `https://picsum.photos/100/100?random=${Math.floor(Math.random() * 1000)}`,
             type: 'Inbound',
-            source: 'Direct'
+            source: 'Direct',
+            assigneeId: currentUser?.id,
+            createdAt: new Date().toISOString()
           };
           newLeads.push(lead);
         }
@@ -624,6 +659,19 @@ const App: React.FC = () => {
          <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[40%] rounded-full bg-blue-500/5 dark:bg-blue-600/10 blur-[120px]" />
       </div>
 
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        leads={leads}
+        tasks={tasks}
+        onNavigate={handleViewChange}
+        onLeadSelect={(l) => setSelectedLeadId(l.id)}
+        onTaskSelect={(t) => {
+           // We might want to open a task detail modal here, but for now just navigate to tasks
+           handleViewChange('tasks');
+        }}
+      />
+
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/80 dark:bg-[#0F0F23]/80 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-4 py-3 flex items-center justify-between">
          <div className="flex items-center gap-3">
@@ -704,11 +752,13 @@ const App: React.FC = () => {
           
           {currentView === 'lists' && (
             <LeadsList 
-              leads={leads} 
+              leads={leads}
+              users={users}
               onImport={handleImportCSV} 
               onAdd={openAddModal}
               onEdit={handleEditLead}
               onBulkDelete={handleBulkDeleteLeads}
+              onBulkAssign={handleBulkAssignLeads}
               onDelete={handleDeleteLead}
               onLeadClick={(lead) => setSelectedLeadId(lead.id)}
             />

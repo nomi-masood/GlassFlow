@@ -27,6 +27,8 @@ export interface Lead {
   source?: string;
   notes?: string;
   activities?: LeadActivity[];
+  assigneeId?: string;
+  createdAt?: string; // ISO string for date added
 }
 
 export interface PipelineColumn {
@@ -74,7 +76,7 @@ export interface Task {
   attachments?: Attachment[];
 }
 
-export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'TASK_REVIEW' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE' | 'LEAD_ACTIVITY_LOG';
+export type ActionType = 'USER_ADD' | 'USER_DELETE' | 'TASK_CREATE' | 'TASK_UPDATE' | 'TASK_DELETE' | 'TASK_REVIEW' | 'LEAD_CREATE' | 'LEAD_UPDATE' | 'LEAD_DELETE' | 'LEAD_STAGE_CHANGE' | 'LEAD_ACTIVITY_LOG' | 'LEAD_ASSIGN';
 
 export interface HistoryLog {
   id: string;

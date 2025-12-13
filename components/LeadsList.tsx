@@ -1,21 +1,23 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Lead } from '../types';
+import { Lead, User } from '../types';
 import { Badge, GlassInput, GlassCard, GlassButton } from './GlassComponents';
-import { Search, Filter, Plus, Upload, Trash2, CheckSquare, Square, MoreVertical, X, ChevronDown, Edit, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Plus, Upload, Trash2, CheckSquare, Square, MoreVertical, X, ChevronDown, Edit, AlertTriangle, UserPlus, User as UserIcon, Calendar, ArrowRight } from 'lucide-react';
 import { PIPELINE_COLUMNS, LEAD_SOURCES, LEAD_TYPES } from '../constants';
 
 interface LeadsListProps {
   leads: Lead[];
+  users: User[];
   onImport: (file: File) => void;
   onAdd: () => void;
   onEdit: (lead: Lead) => void;
   onBulkDelete: (ids: string[]) => void;
+  onBulkAssign: (ids: string[], userId: string) => void;
   onDelete: (id: string) => void;
   onLeadClick: (lead: Lead) => void;
 }
 
-const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, onBulkDelete, onDelete, onLeadClick }) => {
+const LeadsList: React.FC<LeadsListProps> = ({ leads, users, onImport, onAdd, onEdit, onBulkDelete, onBulkAssign, onDelete, onLeadClick }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -28,6 +30,12 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
     targetName?: string;
     count?: number;
   }>({ show: false, type: 'single' });
+
+  // Assign Modal State
+  const [assignModal, setAssignModal] = useState<{
+    show: boolean;
+    targetUserId: string;
+  }>({ show: false, targetUserId: '' });
   
   // Filtering State
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,6 +62,55 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
 
     return matchesSearch && matchesStage && matchesSource && matchesType;
   });
+
+  // Group leads by Date Added
+  const groupLeadsByDate = (leadsList: Lead[]) => {
+    const groups: Record<string, Lead[]> = {
+      'Today': [],
+      'Yesterday': [],
+      'This Week': [],
+      'Earlier': []
+    };
+
+    const now = new Date();
+    // Reset time components for accurate day comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86400000;
+    const weekAgo = today - (86400000 * 7);
+
+    // Sort leads by creation date descending first
+    const sorted = [...leadsList].sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA; // Newest first
+    });
+
+    sorted.forEach(lead => {
+      // Default to "Earlier" if no createdAt
+      if (!lead.createdAt) {
+          groups['Earlier'].push(lead);
+          return;
+      }
+
+      const leadDate = new Date(lead.createdAt);
+      const leadMidnight = new Date(leadDate.getFullYear(), leadDate.getMonth(), leadDate.getDate()).getTime();
+
+      if (leadMidnight === today) {
+        groups['Today'].push(lead);
+      } else if (leadMidnight === yesterday) {
+        groups['Yesterday'].push(lead);
+      } else if (leadMidnight > weekAgo) {
+        groups['This Week'].push(lead);
+      } else {
+        groups['Earlier'].push(lead);
+      }
+    });
+
+    return groups;
+  };
+
+  const groupedLeads = groupLeadsByDate(filteredLeads);
+  const orderedGroups = ['Today', 'Yesterday', 'This Week', 'Earlier'];
 
   useEffect(() => {
     if (!isSelectionMode) {
@@ -101,6 +158,14 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
     });
   };
 
+  const initiateBulkAssign = () => {
+    if (selectedIds.size === 0) return;
+    setAssignModal({
+        show: true,
+        targetUserId: users[0]?.id || ''
+    });
+  };
+
   const initiateSingleDelete = (id: string, name: string) => {
     setDeleteModal({
       show: true,
@@ -121,10 +186,21 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
     setDeleteModal({ show: false, type: 'single' });
   };
 
+  const confirmAssign = () => {
+    if (assignModal.targetUserId) {
+        onBulkAssign(Array.from(selectedIds), assignModal.targetUserId);
+        setIsSelectionMode(false);
+        setSelectedIds(new Set());
+        setAssignModal({ show: false, targetUserId: '' });
+    }
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setFilters({ stage: 'all', source: 'all', type: 'all' });
   };
+
+  const getUserById = (id?: string) => users.find(u => u.id === id);
 
   return (
     <div className="space-y-6">
@@ -135,13 +211,22 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
           {selectedIds.size > 0 ? (
-             <button 
-               onClick={initiateBulkDelete}
-               className="flex-1 md:flex-none justify-center px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
-             >
-               <Trash2 size={16} />
-               <span>Delete ({selectedIds.size})</span>
-             </button>
+             <div className="flex gap-2">
+                 <button 
+                   onClick={initiateBulkAssign}
+                   className="justify-center px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
+                 >
+                   <UserPlus size={16} />
+                   <span>Assign ({selectedIds.size})</span>
+                 </button>
+                 <button 
+                   onClick={initiateBulkDelete}
+                   className="justify-center px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl text-sm font-medium flex items-center gap-2 animate-scale-in transition-all"
+                 >
+                   <Trash2 size={16} />
+                   <span>Delete ({selectedIds.size})</span>
+                 </button>
+             </div>
           ) : (
             <>
               <div className="relative flex-1 min-w-[200px] md:w-64">
@@ -286,91 +371,129 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Company</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Source</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Stage</th>
+              <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Owner</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Last Active</th>
               <th className="p-4 text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider last:rounded-tr-2xl">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-            {filteredLeads.map((lead) => {
-              const isSelected = selectedIds.has(lead.id);
+            {orderedGroups.map(groupName => {
+              const groupLeads = groupedLeads[groupName];
+              if (groupLeads.length === 0) return null;
+
               return (
-                <tr 
-                  key={lead.id} 
-                  className={`group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
-                  onClick={() => {
-                     if(isSelectionMode) {
-                        toggleSelectOne(lead.id);
-                     } else {
-                        onLeadClick(lead);
-                     }
-                  }}
-                >
-                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                    {/* Always show checkbox to allow individual selection without full mode logic complications on row click */}
-                     <button 
-                       onClick={() => toggleSelectOne(lead.id)}
-                       className="text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center animate-scale-in"
-                     >
-                       {isSelected ? (
-                         <CheckSquare size={18} className="text-indigo-500" />
-                       ) : (
-                         <Square size={18} />
-                       )}
-                     </button>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white shadow-inner">
-                        {lead.name.charAt(0)}
+                <React.Fragment key={groupName}>
+                  {/* Styled Group Header */}
+                  <tr className="border-none bg-slate-50/30 dark:bg-white/[0.01]">
+                    <td colSpan={8} className="pt-6 pb-2 px-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${groupName === 'Today' ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}></span>
+                          {groupName}
+                        </h3>
+                        <span className="h-px flex-1 bg-gradient-to-r from-slate-200 dark:from-white/10 to-transparent"></span>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/5">
+                          {groupLeads.length} Leads
+                        </span>
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-slate-800 dark:text-white">{lead.name}</div>
-                        <div className="text-xs font-medium text-slate-500">{lead.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-4 text-sm font-medium text-slate-600 dark:text-slate-300">{lead.company}</td>
-                  <td className="p-4">
-                    <span className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5">
-                      {lead.source || lead.type || 'N/A'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <Badge color={
-                      lead.stage === 'won' ? 'bg-emerald-500' : 
-                      lead.stage === 'lost' ? 'bg-rose-500' : 'bg-indigo-500'
-                    }>
-                      {lead.stage}
-                    </Badge>
-                  </td>
-                  <td className="p-4 text-sm font-medium text-slate-500">{lead.lastActive}</td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-1">
-                       <button 
-                         type="button"
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           onEdit(lead);
-                         }}
-                         className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-lg transition-all"
-                         title="Edit Lead"
-                       >
-                         <Edit size={18} />
-                       </button>
-                       <button 
-                         type="button"
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           initiateSingleDelete(lead.id, lead.name);
-                         }}
-                         className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all z-10"
-                         title="Delete Lead"
-                       >
-                         <Trash2 size={18} />
-                       </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                  
+                  {/* Group Items */}
+                  {groupLeads.map((lead) => {
+                    const isSelected = selectedIds.has(lead.id);
+                    const assignee = getUserById(lead.assigneeId);
+                    
+                    return (
+                      <tr 
+                        key={lead.id} 
+                        className={`group hover:bg-indigo-50/50 dark:hover:bg-white/[0.04] transition-colors cursor-pointer ${isSelected ? 'bg-indigo-50/30 dark:bg-indigo-500/5' : ''}`}
+                        onClick={() => {
+                          if(isSelectionMode) {
+                              toggleSelectOne(lead.id);
+                          } else {
+                              onLeadClick(lead);
+                          }
+                        }}
+                      >
+                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            onClick={() => toggleSelectOne(lead.id)}
+                            className="text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center animate-scale-in"
+                          >
+                            {isSelected ? (
+                              <CheckSquare size={18} className="text-indigo-500" />
+                            ) : (
+                              <Square size={18} />
+                            )}
+                          </button>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-medium text-white shadow-inner shrink-0">
+                              {lead.name.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-slate-800 dark:text-white">{lead.name}</div>
+                              <div className="text-xs font-medium text-slate-500">{lead.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm font-medium text-slate-600 dark:text-slate-300">{lead.company}</td>
+                        <td className="p-4">
+                          <span className="text-xs font-medium px-2 py-1 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5">
+                            {lead.source || lead.type || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <Badge color={
+                            lead.stage === 'won' ? 'bg-emerald-500' : 
+                            lead.stage === 'lost' ? 'bg-rose-500' : 'bg-indigo-500'
+                          }>
+                            {lead.stage}
+                          </Badge>
+                        </td>
+                        <td className="p-4">
+                          {assignee ? (
+                            <div className="flex items-center gap-2">
+                                <img src={assignee.avatarUrl} alt={assignee.name} className="w-6 h-6 rounded-full" />
+                                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate max-w-[100px]">{assignee.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Unassigned</span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm font-medium text-slate-500">{lead.lastActive}</td>
+                        <td className="p-4 text-right">
+                          <div className="flex justify-end gap-1">
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(lead);
+                              }}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-lg transition-all"
+                              title="Edit Lead"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                initiateSingleDelete(lead.id, lead.name);
+                              }}
+                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all z-10"
+                              title="Delete Lead"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -378,7 +501,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
       </div>
 
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3 pb-20">
+      <div className="md:hidden space-y-6 pb-20">
         <div className="flex items-center justify-between px-1">
              <button 
                 onClick={toggleSelectAll}
@@ -394,71 +517,100 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
               <span className="text-xs text-slate-400">{filteredLeads.length} leads</span>
         </div>
 
-        {filteredLeads.map((lead) => {
-           const isSelected = selectedIds.has(lead.id);
+        {orderedGroups.map(groupName => {
+           const groupLeads = groupedLeads[groupName];
+           if (groupLeads.length === 0) return null;
+
            return (
-             <GlassCard 
-                key={lead.id} 
-                onClick={() => {
-                    if(isSelectionMode) toggleSelectOne(lead.id);
-                    else onLeadClick(lead);
-                }}
-                className={`p-4 relative border transition-all ${isSelected ? 'border-indigo-500/50 bg-indigo-50/10' : 'border-white/10'}`}
-             >
-                <div className="flex justify-between items-start mb-3">
-                   <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-medium text-white shadow-inner">
-                        {lead.name.charAt(0)}
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-800 dark:text-white">{lead.name}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{lead.company}</p>
-                      </div>
-                   </div>
-                   <div onClick={(e) => e.stopPropagation()}>
-                       <button 
-                         onClick={() => toggleSelectOne(lead.id)}
-                         className="p-2 -mr-2 text-slate-400"
-                       >
-                         {isSelected ? <CheckSquare size={20} className="text-indigo-500" /> : <Square size={20} />}
-                       </button>
-                   </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
-                        <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Stage</span>
-                        <Badge color={
-                          lead.stage === 'won' ? 'bg-emerald-500' : 
-                          lead.stage === 'lost' ? 'bg-rose-500' : 'bg-indigo-500'
-                        }>
-                          {lead.stage}
-                        </Badge>
-                    </div>
-                    <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
-                        <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Source</span>
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{lead.source}</span>
-                    </div>
+             <div key={groupName}>
+                {/* Mobile Group Header */}
+                <div className="flex items-center gap-3 px-1 mb-4 mt-2">
+                   <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${groupName === 'Today' ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}></span>
+                      {groupName}
+                   </h3>
+                   <div className="h-px bg-gradient-to-r from-slate-200 dark:from-white/10 to-transparent flex-1"></div>
+                   <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/10 px-2 py-0.5 rounded-full border border-slate-200 dark:border-white/5">{groupLeads.length}</span>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
-                    <span className="text-xs text-slate-400">Active: {lead.lastActive}</span>
-                    <div className="flex gap-2">
-                         <button 
-                             onClick={(e) => { e.stopPropagation(); onEdit(lead); }}
-                             className="p-2 bg-slate-100 dark:bg-white/10 rounded-lg text-slate-500 dark:text-slate-300"
-                         >
-                             <Edit size={16} />
-                         </button>
-                         <button 
-                             onClick={(e) => { e.stopPropagation(); initiateSingleDelete(lead.id, lead.name); }}
-                             className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-500"
-                         >
-                             <Trash2 size={16} />
-                         </button>
-                    </div>
+                <div className="space-y-3">
+                  {groupLeads.map((lead) => {
+                    const isSelected = selectedIds.has(lead.id);
+                    const assignee = getUserById(lead.assigneeId);
+                    return (
+                      <GlassCard 
+                          key={lead.id} 
+                          onClick={() => {
+                              if(isSelectionMode) toggleSelectOne(lead.id);
+                              else onLeadClick(lead);
+                          }}
+                          className={`p-4 relative border transition-all ${isSelected ? 'border-indigo-500/50 bg-indigo-50/10' : 'border-white/10'}`}
+                      >
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-sm font-medium text-white shadow-inner">
+                                  {lead.name.charAt(0)}
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-bold text-slate-800 dark:text-white">{lead.name}</h3>
+                                  <p className="text-xs text-slate-500 dark:text-slate-400">{lead.company}</p>
+                                </div>
+                            </div>
+                            <div onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                  onClick={() => toggleSelectOne(lead.id)}
+                                  className="p-2 -mr-2 text-slate-400"
+                                >
+                                  {isSelected ? <CheckSquare size={20} className="text-indigo-500" /> : <Square size={20} />}
+                                </button>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-2 mb-4">
+                              <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
+                                  <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Stage</span>
+                                  <Badge color={
+                                    lead.stage === 'won' ? 'bg-emerald-500' : 
+                                    lead.stage === 'lost' ? 'bg-rose-500' : 'bg-indigo-500'
+                                  }>
+                                    {lead.stage}
+                                  </Badge>
+                              </div>
+                              <div className="bg-slate-50 dark:bg-white/5 rounded-lg p-2 border border-slate-100 dark:border-white/5">
+                                  <span className="text-[10px] uppercase text-slate-400 font-bold block mb-1">Owner</span>
+                                  {assignee ? (
+                                      <div className="flex items-center gap-2">
+                                          <img src={assignee.avatarUrl} className="w-4 h-4 rounded-full" />
+                                          <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{assignee.name}</span>
+                                      </div>
+                                  ) : (
+                                      <span className="text-xs text-slate-400 italic">Unassigned</span>
+                                  )}
+                              </div>
+                          </div>
+
+                          <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-3">
+                              <span className="text-xs text-slate-400">Active: {lead.lastActive}</span>
+                              <div className="flex gap-2">
+                                  <button 
+                                      onClick={(e) => { e.stopPropagation(); onEdit(lead); }}
+                                      className="p-2 bg-slate-100 dark:bg-white/10 rounded-lg text-slate-500 dark:text-slate-300"
+                                  >
+                                      <Edit size={16} />
+                                  </button>
+                                  <button 
+                                      onClick={(e) => { e.stopPropagation(); initiateSingleDelete(lead.id, lead.name); }}
+                                      className="p-2 bg-rose-50 dark:bg-rose-500/10 rounded-lg text-rose-500"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
+                              </div>
+                          </div>
+                      </GlassCard>
+                    );
+                  })}
                 </div>
-             </GlassCard>
+             </div>
            );
         })}
       </div>
@@ -504,6 +656,62 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, onImport, onAdd, onEdit, o
                             className="flex-1"
                         >
                             Delete
+                        </GlassButton>
+                    </div>
+                </GlassCard>
+            </div>
+        </div>
+      )}
+
+      {/* Bulk Assign Modal */}
+      {assignModal.show && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm transition-opacity" 
+              onClick={() => setAssignModal({ ...assignModal, show: false })} 
+            />
+            <div className="relative w-full max-w-sm animate-scale-in">
+                <GlassCard className="p-6 border-white/20 bg-white/90 dark:bg-[#15152a]/95 shadow-2xl">
+                    <div className="flex flex-col items-center text-center mb-6">
+                        <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center mb-4 text-indigo-500">
+                            <UserPlus size={24} />
+                        </div>
+                        <h2 className="text-xl font-medium text-slate-800 dark:text-white mb-2">Bulk Assign Leads</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                            Select a user to assign <span className="font-semibold text-slate-900 dark:text-white">{selectedIds.size} leads</span> to.
+                        </p>
+                        
+                        <div className="w-full text-left">
+                             <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 ml-1 uppercase tracking-wide">Assignee</label>
+                             <div className="relative">
+                                <select 
+                                    className="w-full glass-input-base rounded-xl px-4 py-2 appearance-none bg-transparent text-slate-900 dark:text-white focus:outline-none cursor-pointer font-medium"
+                                    value={assignModal.targetUserId}
+                                    onChange={(e) => setAssignModal({...assignModal, targetUserId: e.target.value})}
+                                >
+                                    {users.map(u => (
+                                        <option key={u.id} value={u.id} className="text-black">
+                                            {u.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <UserIcon className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                             </div>
+                        </div>
+                    </div>
+                    <div className="flex gap-3">
+                        <GlassButton 
+                            variant="ghost" 
+                            onClick={() => setAssignModal({ ...assignModal, show: false })}
+                            className="flex-1"
+                        >
+                            Cancel
+                        </GlassButton>
+                        <GlassButton 
+                            onClick={confirmAssign}
+                            className="flex-1 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-500 text-white"
+                        >
+                            Assign
                         </GlassButton>
                     </div>
                 </GlassCard>
